@@ -31,7 +31,9 @@ handles both, and:
 - escapes a `|` inside a cell, which would otherwise split it in two;
 - keeps a line break inside a cell as `<br>`, instead of breaking the row;
 - right-aligns columns of numbers — `1,234.50`, `12%`, `$40`, `(7)` — and lines
-  the columns up in the editor.
+  the columns up in the editor;
+- keeps the table inside the callout, quote or list item you paste it into,
+  repeating the `>` on every line or indenting it to the item.
 
 ## Commands
 

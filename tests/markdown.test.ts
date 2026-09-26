@@ -10,6 +10,7 @@ import {
   splitRow,
   tableRows,
   toMarkdownTable,
+  unquote,
 } from '../src/markdown.ts';
 
 const FRUIT = [
@@ -129,4 +130,33 @@ test('puts the table on lines of its own, with blank lines around it', () => {
   assert.equal(placeBlock(t, '', 'rest', null, null), t + '\n\n');
   assert.equal(placeBlock(t, '', '', 'Paragraph above', 'Paragraph below'), '\n' + t + '\n');
   assert.equal(placeBlock(t, '', '', '', ''), t);
+});
+
+test('a table pasted in a quote or callout stays inside it', () => {
+  const t = '| a |\n| --- |\n| 1 |';
+  const inQuote = '| a |\n> | --- |\n> | 1 |';
+  // Straight under a callout's title, on its empty second line.
+  assert.equal(placeBlock(t, '> ', '', '> [!note] Data', null), inQuote);
+  // Under text in the callout: a blank quote line first, and one after
+  // when more of the callout follows.
+  assert.equal(placeBlock(t, '> ', '', '> Some text', '> More'), '\n> ' + inQuote + '\n>');
+  // At the end of a line of text in a nested quote.
+  assert.equal(
+    placeBlock(t, '> > Text', '', null, null),
+    '\n> >\n> > | a |\n> > | --- |\n> > | 1 |',
+  );
+});
+
+test('a table pasted in a list item stays in the item', () => {
+  const t = '| a |\n| --- |\n| 1 |';
+  assert.equal(placeBlock(t, '- ', '', null, null), '| a |\n  | --- |\n  | 1 |');
+  assert.equal(placeBlock(t, '- Item', '', null, null), '\n\n  | a |\n  | --- |\n  | 1 |');
+  assert.equal(placeBlock(t, '  ', '', '- Item', null), '\n  | a |\n  | --- |\n  | 1 |');
+  assert.equal(placeBlock(t, '> 1. Step', '', null, null), '\n>\n>    | a |\n>    | --- |\n>    | 1 |');
+});
+
+test('a table inside a callout is found once its markers are set aside', () => {
+  const lines = ['> [!note] Data', '> | a | b |', '> | --- | --- |', '> | 1 | 2 |'].map(unquote);
+  assert.deepEqual(findTable(lines, 2), { start: 1, end: 3 });
+  assert.deepEqual(tableRows(lines.slice(1)), [['a', 'b'], ['1', '2']]);
 });

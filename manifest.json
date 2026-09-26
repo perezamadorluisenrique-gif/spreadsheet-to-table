@@ -1,7 +1,7 @@
 {
   "id": "spreadsheet-to-table",
   "name": "Spreadsheet to Table",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "minAppVersion": "0.15.3",
   "description": "Paste cells from Excel, Google Sheets, Numbers or LibreOffice Calc as a Markdown table with a real header row. Also converts CSV or tab-separated text, and copies a table back out for a spreadsheet.",
   "author": "Siulved54",
