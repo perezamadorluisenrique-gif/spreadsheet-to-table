@@ -10,6 +10,7 @@ import {
   placeBlock,
   tableRows,
   toMarkdownTable,
+  unquote,
 } from './src/markdown.ts';
 import type { TableOptions } from './src/markdown.ts';
 
@@ -179,8 +180,9 @@ export default class SpreadsheetToTablePlugin extends Plugin {
     editor.replaceSelection(text);
   }
 
+  /** The note's lines, with quote and callout markers set aside, so a table in a callout is found too. */
   private lines(editor: Editor): string[] {
-    return editor.getValue().split('\n');
+    return editor.getValue().split('\n').map(unquote);
   }
 
   private tableAtCursor(editor: Editor): Rows | null {

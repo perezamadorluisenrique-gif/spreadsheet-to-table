@@ -4,6 +4,15 @@ The release workflow uses the section named after the version being released
 as the release description, so every version needs one. `npm version <x.y.z>`
 renames the `Unreleased` heading below to that version.
 
+## 0.1.2
+
+- A table pasted inside a callout or a quote stays inside it. Every line now
+  starts with the `>` markers; before, the table landed below the callout
+  and cut it in two.
+- A table pasted in a list item is indented to the item, so the list goes on
+  after it instead of restarting.
+- "Copy table for a spreadsheet" also finds a table inside a callout.
+
 ## 0.1.1
 
 - **Paste as table** works on phones and tablets. Where the app is not

@@ -190,9 +190,47 @@ export function inCodeOrFrontmatter(before: string): boolean {
 }
 
 /**
+ * Quote or callout markers, then indentation, then a list marker, at the
+ * start of a line.
+ */
+const CONTAINER = /^((?:[ \t]*>[ \t]?)*)([ \t]*)((?:[-*+]|\d{1,9}[.)])(?:[ \t]+|$))?/;
+
+/**
+ * What a line's content sits inside: the quote or callout markers every
+ * line of it must repeat, and the indentation that keeps a line in the
+ * same list item. `lead` is how long the markers are on this very line, and
+ * `listItem` says whether they end in a list marker.
+ */
+export function containerOf(line: string): { lead: number; prefix: string; listItem: boolean } {
+  const m = CONTAINER.exec(line) as RegExpExecArray;
+  const marker = m[3] ?? '';
+  return { lead: m[0].length, prefix: m[1] + m[2] + ' '.repeat(marker.length), listItem: marker !== '' };
+}
+
+/** A line without its quote or callout markers, `> > `. */
+export function unquote(line: string): string {
+  return line.replace(/^(?:[ \t]*>[ \t]?)+/, '');
+}
+
+/** A line with no content of its own once its quote markers are set aside. */
+function isBlank(line: string | null): boolean {
+  if (line === null) return true;
+  return line.replace(/^(?:[ \t]*>)*/, '').trim() === '';
+}
+
+/** A callout's title line, `> [!note] Title`, which a table may follow directly. */
+function isCalloutTitle(line: string | null): boolean {
+  return line !== null && /^(?:[ \t]*>)+[ \t]*\[![^\]]+\]/.test(line);
+}
+
+/**
  * The text to insert so a table lands as a block of its own: on its own
  * lines, with a blank line between it and any text around it, since a
  * Markdown table does not start in the middle of a paragraph.
+ *
+ * Inside a quote or a callout, every line repeats the `>` markers, so the
+ * table stays inside it; in a list item, every line is indented to the
+ * item's text, so the table stays in the item.
  *
  * `before` and `after` are the text on the cursor's line either side of it;
  * `lineAbove` and `lineBelow` are the neighbouring lines, or null at the
@@ -205,11 +243,21 @@ export function placeBlock(
   lineAbove: string | null,
   lineBelow: string | null,
 ): string {
+  // Only the text before the cursor decides: the table goes there.
+  const { lead: markers, prefix, listItem } = containerOf(before);
+  const blank = prefix.replace(/[ \t]+$/, '');
+  const newLine = '\n' + prefix;
+  const text = before.slice(markers);
+
   let lead = '';
-  if (before.trim() !== '') lead = '\n\n';
-  else if (lineAbove !== null && lineAbove.trim() !== '') lead = '\n';
+  if (text.trim() !== '') lead = '\n' + blank + newLine;
+  // Straight after an empty list marker, `- `, the table is the item's
+  // first block and starts on the marker's line.
+  else if (!listItem && !isBlank(lineAbove) && !isCalloutTitle(lineAbove)) lead = newLine;
+
   let tail = '';
-  if (after.trim() !== '') tail = '\n\n';
-  else if (lineBelow !== null && lineBelow.trim() !== '') tail = '\n';
-  return lead + table + tail;
+  if (after.trim() !== '') tail = '\n' + blank + newLine;
+  else if (!isBlank(lineBelow)) tail = '\n' + blank;
+
+  return lead + table.split('\n').join(newLine) + tail;
 }
