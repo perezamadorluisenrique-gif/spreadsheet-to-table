@@ -1,4 +1,4 @@
-import { App, Editor, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { App, Editor, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
 import type { SettingDefinitionItem } from 'obsidian';
 
 import { readAnyDelimited, spreadsheetRows, toTsv } from './src/delimited.ts';
@@ -40,6 +40,7 @@ export default class SpreadsheetToTablePlugin extends Plugin {
     this.addCommand({
       id: 'paste-as-table',
       name: 'Paste as table',
+      icon: 'clipboard-paste',
       editorCallback: (editor) => {
         void this.pasteAsTable(editor);
       },
@@ -47,6 +48,7 @@ export default class SpreadsheetToTablePlugin extends Plugin {
     this.addCommand({
       id: 'convert-selection-to-table',
       name: 'Convert selection to table',
+      icon: 'table',
       editorCheckCallback: (checking, editor) => {
         if (!editor.somethingSelected()) return false;
         if (!checking) this.convertSelection(editor);
@@ -56,6 +58,7 @@ export default class SpreadsheetToTablePlugin extends Plugin {
     this.addCommand({
       id: 'copy-table-for-spreadsheet',
       name: 'Copy table for a spreadsheet',
+      icon: 'clipboard-copy',
       editorCheckCallback: (checking, editor) => {
         const rows = this.tableAtCursor(editor);
         if (!rows) return false;
@@ -116,16 +119,25 @@ export default class SpreadsheetToTablePlugin extends Plugin {
    * commas or semicolons between cells, or one cell per line.
    */
   private async pasteAsTable(editor: Editor): Promise<void> {
-    let text: string;
+    let text = '';
     try {
       text = await navigator.clipboard.readText();
     } catch {
-      new Notice('Could not read the clipboard.');
+      // Phones and tablets often refuse a plugin the clipboard, or only
+      // allow it after a tap the command palette has already used up. A
+      // paste the user makes themselves always works, so ask for one.
+    }
+    if (text === '') {
+      new PasteBox(this.app, (pasted) => this.insertDelimited(editor, pasted, 'The pasted text')).open();
       return;
     }
+    this.insertDelimited(editor, text, 'The clipboard');
+  }
+
+  private insertDelimited(editor: Editor, text: string, source: string): void {
     const read = readAnyDelimited(text);
     if (!read) {
-      new Notice('The clipboard has no text to make a table from.');
+      new Notice(`${source} has no text to make a table from.`);
       return;
     }
     this.insertTable(editor, read.rows);
@@ -181,14 +193,83 @@ export default class SpreadsheetToTablePlugin extends Plugin {
   }
 
   private async copyForSpreadsheet(rows: Rows): Promise<void> {
+    const tsv = toTsv(rows);
     try {
-      await navigator.clipboard.writeText(toTsv(rows));
+      await navigator.clipboard.writeText(tsv);
     } catch {
-      new Notice('Could not write to the clipboard.');
+      // Where the clipboard is off limits, as on some phones, hand the text
+      // over selected so the system's own Copy takes it.
+      new CopyBox(this.app, tsv).open();
       return;
     }
     const columns = Math.max(...rows.map((row) => row.length));
     new Notice(`Copied ${count(rows.length, 'row')} of ${count(columns, 'column')}. Paste into any spreadsheet.`);
+  }
+}
+
+/**
+ * A box to paste into, for when the clipboard cannot be read directly.
+ * The paste lands here rather than in the note, and whatever came with it
+ * is made into a table as soon as it arrives.
+ */
+class PasteBox extends Modal {
+  constructor(app: App, private readonly onText: (text: string) => void) {
+    super(app);
+  }
+
+  onOpen(): void {
+    this.titleEl.setText('Paste as table');
+    this.contentEl.createEl('p', {
+      text: 'Paste your cells into the box below. On a phone or tablet, press and hold in the box, then choose Paste.',
+    });
+    const box = this.contentEl.createEl('textarea');
+    box.rows = 6;
+    box.addEventListener('paste', (evt) => {
+      const text = evt.clipboardData?.getData('text/plain') ?? '';
+      if (text === '') return;
+      evt.preventDefault();
+      this.finish(text);
+    });
+    new Setting(this.contentEl).addButton((button) =>
+      button
+        .setButtonText('Make table')
+        .setCta()
+        .onClick(() => this.finish(box.value)),
+    );
+    box.focus();
+  }
+
+  private finish(text: string): void {
+    this.close();
+    this.onText(text);
+  }
+
+  onClose(): void {
+    this.contentEl.empty();
+  }
+}
+
+/** The table as text, selected, for when it cannot be put on the clipboard. */
+class CopyBox extends Modal {
+  constructor(app: App, private readonly text: string) {
+    super(app);
+  }
+
+  onOpen(): void {
+    this.titleEl.setText('Copy table for a spreadsheet');
+    this.contentEl.createEl('p', {
+      text: 'The clipboard could not be written to. The table is selected below: copy it, then paste it into any spreadsheet.',
+    });
+    const box = this.contentEl.createEl('textarea');
+    box.rows = 6;
+    box.readOnly = true;
+    box.value = this.text;
+    box.focus();
+    box.select();
+  }
+
+  onClose(): void {
+    this.contentEl.empty();
   }
 }
 
