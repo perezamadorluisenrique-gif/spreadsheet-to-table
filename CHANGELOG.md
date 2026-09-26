@@ -4,6 +4,18 @@ The release workflow uses the section named after the version being released
 as the release description, so every version needs one. `npm version <x.y.z>`
 renames the `Unreleased` heading below to that version.
 
+## 0.1.1
+
+- **Paste as table** works on phones and tablets. Where the app is not
+  allowed to read the clipboard, as can happen on Android and iOS, it now
+  opens a box to paste into instead of giving up with "Could not read the
+  clipboard". The paste is made into a table as soon as it lands.
+- **Copy table for a spreadsheet** no longer stops at "Could not write to
+  the clipboard": it shows the table selected, ready for the system's own
+  Copy.
+- Every command has an icon, so it shows what it does instead of a question
+  mark when added to the mobile toolbar.
+
 ## 0.1.0
 
 First release.
