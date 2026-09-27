@@ -45,6 +45,8 @@ handles both, and:
 | Insert CSV file as table | Picks a `.csv` or `.tsv` file in your vault and inserts it as a table at the cursor. Files separated by semicolons, as European spreadsheets save them, work too. |
 | Copy table as CSV | Copies the table under the cursor as comma-separated text, quoted where a cell needs it. |
 | Save table as CSV file | Writes the table under the cursor to a `.csv` file next to the note, named after it. Nothing already there is overwritten. |
+| Sort table by this column, ascending / descending | Sorts the rows of the table under the cursor by the column the cursor is in. Numbers sort as numbers (`1,234.50`, `12%`, `$40`, `(7)`), text sorts naturally (`item 9` before `item 10`, case aside), and empty cells go last. The header stays on top. |
+| Transpose table (swap rows and columns) | The first column becomes the header row, and each row a column. |
 
 None has a hotkey by default; assign one in **Settings → Hotkeys**.
 

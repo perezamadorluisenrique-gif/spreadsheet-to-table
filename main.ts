@@ -13,6 +13,8 @@ import {
   unquote,
 } from './src/markdown.ts';
 import type { TableOptions } from './src/markdown.ts';
+import { columnAt, readTable, sortBody, transpose, writeTable } from './src/transform.ts';
+import type { SourceTable } from './src/transform.ts';
 
 interface SpreadsheetToTableSettings extends TableOptions {
   /** Turn copied cells into a table on an ordinary paste. */
@@ -108,7 +110,65 @@ export default class SpreadsheetToTablePlugin extends Plugin {
       },
     });
 
+    this.addCommand({
+      id: 'sort-table-ascending',
+      name: 'Sort table by this column, ascending',
+      icon: 'arrow-down-az',
+      editorCheckCallback: (checking, editor) =>
+        this.reshape(checking, editor, (table, column) => ({ ...table, body: sortBody(table.body, column, false) }), 'Sorted'),
+    });
+    this.addCommand({
+      id: 'sort-table-descending',
+      name: 'Sort table by this column, descending',
+      icon: 'arrow-up-za',
+      editorCheckCallback: (checking, editor) =>
+        this.reshape(checking, editor, (table, column) => ({ ...table, body: sortBody(table.body, column, true) }), 'Sorted'),
+    });
+    this.addCommand({
+      id: 'transpose-table',
+      name: 'Transpose table (swap rows and columns)',
+      icon: 'arrow-down-up',
+      editorCheckCallback: (checking, editor) => this.reshape(checking, editor, (table) => transpose(table), 'Transposed'),
+    });
+
     this.addSettingTab(new SpreadsheetToTableSettingTab(this.app, this));
+  }
+
+  /**
+   * Rewrites the table under the cursor in one edit, so one undo puts it
+   * back. Its quote or callout markers and its indentation are kept.
+   */
+  private reshape(
+    checking: boolean,
+    editor: Editor,
+    change: (table: SourceTable, column: number) => SourceTable,
+    verb: string,
+  ): boolean {
+    const cursor = editor.getCursor();
+    const raw = editor.getValue().split('\n');
+    const lines = raw.map(unquote);
+    const found = findTable(lines, cursor.line);
+    if (!found || inCodeOrFrontmatter(lines.slice(0, found.start + 1).join('\n'))) return false;
+    if (checking) return true;
+
+    const markers = raw[found.start].slice(0, raw[found.start].length - lines[found.start].length);
+    const indent = /^[ \t]*/.exec(lines[found.start])?.[0] ?? '';
+    const cursorLine = lines[cursor.line];
+    const column = columnAt(cursorLine, cursor.ch - (raw[cursor.line].length - cursorLine.length));
+    const table = readTable(lines.slice(found.start, found.end + 1));
+    const text = writeTable(change(table, column), this.settings.padColumns)
+      .map((line) => markers + indent + line)
+      .join('\n');
+
+    const from = { line: found.start, ch: 0 };
+    const to = { line: found.end, ch: raw[found.end].length };
+    if (editor.getRange(from, to) === text) {
+      new Notice('The table is already in that order.');
+      return true;
+    }
+    editor.transaction({ changes: [{ from, to, text }] });
+    new Notice(`${verb} ${count(table.body.length, 'row')}.`);
+    return true;
   }
 
   private async insertFile(editor: Editor, file: TFile): Promise<void> {
