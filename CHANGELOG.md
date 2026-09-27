@@ -4,6 +4,16 @@ The release workflow uses the section named after the version being released
 as the release description, so every version needs one. `npm version <x.y.z>`
 renames the `Unreleased` heading below to that version.
 
+## 0.3.0
+
+- **Sort a table by a column**: *Sort table by this column, ascending* and
+  *descending* sort the rows by the column under the cursor. Numbers sort as
+  numbers, whatever their format, text sorts naturally, empty cells go last,
+  and rows that tie keep their order.
+- **Transpose a table**: swaps its rows and columns.
+- Both keep the table inside its callout, quote or list item, keep each
+  column's alignment where it still applies, and undo in one step.
+
 ## 0.2.0
 
 - **Insert CSV file as table**: pick a `.csv` or `.tsv` file in the vault and
