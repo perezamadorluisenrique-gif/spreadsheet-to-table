@@ -162,3 +162,32 @@ export function toTsv(rows: Rows): string {
     .map((row) => row.map((cell) => (/[\t\r\n"]/.test(cell) ? `"${cell.replace(/"/g, '""')}"` : cell)).join('\t'))
     .join('\n');
 }
+
+/**
+ * Comma-separated text (RFC 4180) for a `.csv` file. A cell holding the
+ * delimiter, a double quote, a line break, or space at either end is
+ * quoted, with its quotes doubled. Lines end in `\n`, and the file ends
+ * with one.
+ */
+export function toCsv(rows: Rows, delimiter: ',' | ';' = ','): string {
+  const needsQuotes = (cell: string) =>
+    cell.includes(delimiter) || /["\r\n]/.test(cell) || cell !== cell.trim();
+  return (
+    rows.map((row) => row.map((cell) => (needsQuotes(cell) ? `"${cell.replace(/"/g, '""')}"` : cell)).join(delimiter)).join('\n') +
+    '\n'
+  );
+}
+
+/**
+ * The rows of a `.csv` or `.tsv` file. A `.tsv` is read as tab-separated;
+ * anything else goes through the same detection as a paste, so European
+ * files separated by semicolons work too.
+ */
+export function readDelimitedFile(text: string, extension: string): Rows | null {
+  const body = text.replace(/^\uFEFF/, '');
+  if (extension.toLowerCase() === 'tsv') {
+    const rows = parseDelimited(body, '\t');
+    return rows.length ? rows : null;
+  }
+  return readAnyDelimited(body)?.rows ?? null;
+}

@@ -1,7 +1,7 @@
-import { App, Editor, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { App, Editor, FuzzySuggestModal, Modal, Notice, Plugin, PluginSettingTab, Setting, TFile, normalizePath } from 'obsidian';
 import type { SettingDefinitionItem } from 'obsidian';
 
-import { readAnyDelimited, spreadsheetRows, toTsv } from './src/delimited.ts';
+import { readAnyDelimited, readDelimitedFile, spreadsheetRows, toCsv, toTsv } from './src/delimited.ts';
 import type { Rows } from './src/delimited.ts';
 import {
   DEFAULT_TABLE_OPTIONS,
@@ -68,7 +68,71 @@ export default class SpreadsheetToTablePlugin extends Plugin {
       },
     });
 
+    this.addCommand({
+      id: 'insert-csv-file',
+      name: 'Insert CSV file as table',
+      icon: 'file-spreadsheet',
+      editorCallback: (editor) => {
+        const files = this.app.vault.getFiles().filter((file) => /^(csv|tsv)$/i.test(file.extension));
+        if (files.length === 0) {
+          new Notice('There are no .csv or .tsv files in this vault.');
+          return;
+        }
+        if (!this.canPlaceTable(editor)) {
+          new Notice('A table cannot go here: the cursor is in code, the properties or another table.');
+          return;
+        }
+        new DelimitedFilePicker(this.app, files, (file) => void this.insertFile(editor, file)).open();
+      },
+    });
+    this.addCommand({
+      id: 'copy-table-as-csv',
+      name: 'Copy table as CSV',
+      icon: 'clipboard-list',
+      editorCheckCallback: (checking, editor) => {
+        const rows = this.tableAtCursor(editor);
+        if (!rows) return false;
+        if (!checking) void this.copyText(toCsv(rows), rows, 'Paste it wherever CSV is accepted.');
+        return true;
+      },
+    });
+    this.addCommand({
+      id: 'save-table-as-csv',
+      name: 'Save table as CSV file',
+      icon: 'file-down',
+      editorCheckCallback: (checking, editor, ctx) => {
+        const rows = this.tableAtCursor(editor);
+        if (!rows || !ctx.file) return false;
+        if (!checking) void this.saveCsv(rows, ctx.file);
+        return true;
+      },
+    });
+
     this.addSettingTab(new SpreadsheetToTableSettingTab(this.app, this));
+  }
+
+  private async insertFile(editor: Editor, file: TFile): Promise<void> {
+    const rows = readDelimitedFile(await this.app.vault.read(file), file.extension);
+    if (!rows) {
+      new Notice(`${file.name} has no rows to make a table from.`);
+      return;
+    }
+    this.insertTable(editor, rows);
+    new Notice(`Inserted ${file.name}: ${count(rows.length, 'row')}.`);
+  }
+
+  /**
+   * Writes the table to a `.csv` next to the note, named after it, without
+   * overwriting anything already there.
+   */
+  private async saveCsv(rows: Rows, note: TFile): Promise<void> {
+    const folder = note.parent && !note.parent.isRoot() ? note.parent.path + '/' : '';
+    let path = normalizePath(`${folder}${note.basename}.csv`);
+    for (let n = 2; this.app.vault.getAbstractFileByPath(path); n++) {
+      path = normalizePath(`${folder}${note.basename} ${n}.csv`);
+    }
+    await this.app.vault.create(path, toCsv(rows));
+    new Notice(`Saved ${count(rows.length, 'row')} to ${path}.`);
   }
 
   async loadSettings() {
@@ -195,17 +259,20 @@ export default class SpreadsheetToTablePlugin extends Plugin {
   }
 
   private async copyForSpreadsheet(rows: Rows): Promise<void> {
-    const tsv = toTsv(rows);
+    await this.copyText(toTsv(rows), rows, 'Paste into any spreadsheet.');
+  }
+
+  private async copyText(text: string, rows: Rows, hint: string): Promise<void> {
     try {
-      await navigator.clipboard.writeText(tsv);
+      await navigator.clipboard.writeText(text);
     } catch {
       // Where the clipboard is off limits, as on some phones, hand the text
       // over selected so the system's own Copy takes it.
-      new CopyBox(this.app, tsv).open();
+      new CopyBox(this.app, text).open();
       return;
     }
     const columns = Math.max(...rows.map((row) => row.length));
-    new Notice(`Copied ${count(rows.length, 'row')} of ${count(columns, 'column')}. Paste into any spreadsheet.`);
+    new Notice(`Copied ${count(rows.length, 'row')} of ${count(columns, 'column')}. ${hint}`);
   }
 }
 
@@ -248,6 +315,30 @@ class PasteBox extends Modal {
 
   onClose(): void {
     this.contentEl.empty();
+  }
+}
+
+/** The vault's `.csv` and `.tsv` files, most recently changed first. */
+class DelimitedFilePicker extends FuzzySuggestModal<TFile> {
+  constructor(
+    app: App,
+    private readonly files: TFile[],
+    private readonly onPick: (file: TFile) => void,
+  ) {
+    super(app);
+    this.setPlaceholder('Choose a CSV or TSV file to insert as a table');
+  }
+
+  getItems(): TFile[] {
+    return [...this.files].sort((a, b) => b.stat.mtime - a.stat.mtime);
+  }
+
+  getItemText(file: TFile): string {
+    return file.path;
+  }
+
+  onChooseItem(file: TFile): void {
+    this.onPick(file);
   }
 }
 

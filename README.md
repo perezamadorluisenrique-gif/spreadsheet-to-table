@@ -42,6 +42,9 @@ handles both, and:
 | Paste as table | Reads the clipboard as a table whatever separates the cells: tabs, commas or semicolons, or one cell per line. |
 | Convert selection to table | The same, for text already in the note, such as a pasted block of CSV. |
 | Copy table for a spreadsheet | Copies the table under the cursor as tab-separated text. Paste it into any spreadsheet and each cell lands in its own cell. |
+| Insert CSV file as table | Picks a `.csv` or `.tsv` file in your vault and inserts it as a table at the cursor. Files separated by semicolons, as European spreadsheets save them, work too. |
+| Copy table as CSV | Copies the table under the cursor as comma-separated text, quoted where a cell needs it. |
+| Save table as CSV file | Writes the table under the cursor to a `.csv` file next to the note, named after it. Nothing already there is overwritten. |
 
 None has a hotkey by default; assign one in **Settings → Hotkeys**.
 
