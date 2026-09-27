@@ -4,6 +4,15 @@ The release workflow uses the section named after the version being released
 as the release description, so every version needs one. `npm version <x.y.z>`
 renames the `Unreleased` heading below to that version.
 
+## 0.2.0
+
+- **Insert CSV file as table**: pick a `.csv` or `.tsv` file in the vault and
+  it is inserted as a table at the cursor. Comma, semicolon and tab
+  separated files are recognised, and a byte order mark is ignored.
+- **Copy table as CSV** and **Save table as CSV file**: the table under the
+  cursor as comma-separated text (RFC 4180 quoting), on the clipboard or in
+  a `.csv` next to the note.
+
 ## 0.1.2
 
 - A table pasted inside a callout or a quote stays inside it. Every line now

@@ -118,3 +118,33 @@ test('what it writes, it reads back unchanged', () => {
   ];
   assert.deepEqual(parseDelimited(toTsv(rows), '\t'), rows);
 });
+
+import { readDelimitedFile, toCsv } from '../src/delimited.ts';
+
+test('toCsv quotes only the cells that need it', () => {
+  assert.equal(
+    toCsv([
+      ['Name', 'Note'],
+      ['Ada, Countess', 'said "hi"'],
+      [' padded', 'two\nlines'],
+      ['plain', ''],
+    ]),
+    'Name,Note\n"Ada, Countess","said ""hi"""\n" padded","two\nlines"\nplain,\n',
+  );
+  assert.equal(toCsv([['a;b', 'c,d']], ';'), '"a;b";c,d\n');
+});
+
+test('a CSV written by toCsv reads back to the same rows', () => {
+  const rows = [
+    ['h1', 'h2'],
+    ['a, b', 'x "y"'],
+    ['multi\nline', 'z'],
+  ];
+  assert.deepEqual(readDelimitedFile(toCsv(rows), 'csv'), rows);
+});
+
+test('readDelimitedFile reads tsv, semicolon csv, and drops a byte order mark', () => {
+  assert.deepEqual(readDelimitedFile('a\tb\n1\t2\n', 'tsv'), [['a', 'b'], ['1', '2']]);
+  assert.deepEqual(readDelimitedFile('﻿Name;Price\nTea;1,50\n', 'csv'), [['Name', 'Price'], ['Tea', '1,50']]);
+  assert.equal(readDelimitedFile('', 'csv'), null);
+});
