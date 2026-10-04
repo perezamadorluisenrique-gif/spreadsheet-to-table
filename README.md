@@ -3,6 +3,8 @@
 Copy cells in Excel, Google Sheets, Numbers or LibreOffice Calc, paste them
 into a note, and get a Markdown table, **with the first row as its header**.
 
+![A note with a heading and a sentence; after Ctrl+V, five rows of copied spreadsheet cells (Region, Units, Revenue, Change) appear as a Markdown table with a header row and right-aligned number columns](https://raw.githubusercontent.com/perezamadorluisenrique-gif/spreadsheet-to-table/main/docs/paste.gif)
+
 Copied from the spreadsheet (a tab between cells):
 
 ```text
