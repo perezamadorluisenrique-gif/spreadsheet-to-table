@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  DEFAULT_TABLE_OPTIONS,
   escapeCell,
   findTable,
   inCodeOrFrontmatter,
@@ -159,4 +160,13 @@ test('a table inside a callout is found once its markers are set aside', () => {
   const lines = ['> [!note] Data', '> | a | b |', '> | --- | --- |', '> | 1 | 2 |'].map(unquote);
   assert.deepEqual(findTable(lines, 2), { start: 1, end: 3 });
   assert.deepEqual(tableRows(lines.slice(1)), [['a', 'b'], ['1', '2']]);
+});
+
+test('default alignment applies to columns that are not numbers', () => {
+  const rows = [['Name', 'Qty'], ['a', '1']];
+  const base = { ...DEFAULT_TABLE_OPTIONS, padColumns: false };
+  assert.equal(toMarkdownTable(rows, { ...base, defaultAlign: 'left' }).split('\n')[1], '| :-- | --: |');
+  assert.equal(toMarkdownTable(rows, { ...base, defaultAlign: 'center' }).split('\n')[1], '| :-: | --: |');
+  assert.equal(toMarkdownTable(rows, { ...base, defaultAlign: 'right', alignNumbers: false }).split('\n')[1], '| --: | --: |');
+  assert.equal(toMarkdownTable(rows, base).split('\n')[1], '| --- | --: |');
 });

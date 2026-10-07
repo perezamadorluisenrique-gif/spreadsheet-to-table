@@ -1,7 +1,7 @@
 {
   "name": "spreadsheet-to-table",
-  "version": "0.3.0",
-  "description": "Spreadsheet to Table for Obsidian - paste cells from Excel, Google Sheets, Numbers or LibreOffice as a Markdown table, and copy a table back out.",
+  "version": "0.4.0",
+  "description": "Table tools for Markdown notes: paste spreadsheet cells as a table, edit rows and columns, sort, and copy a table as rich text or CSV.",
   "main": "main.js",
   "scripts": {
     "dev": "node esbuild.config.mjs",

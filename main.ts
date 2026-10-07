@@ -1,8 +1,10 @@
-import { App, Editor, FuzzySuggestModal, Modal, Notice, Plugin, PluginSettingTab, Setting, TFile, normalizePath } from 'obsidian';
+import { App, Editor, FuzzySuggestModal, Menu, Modal, Notice, Plugin, PluginSettingTab, Setting, TFile, normalizePath } from 'obsidian';
 import type { SettingDefinitionItem } from 'obsidian';
 
 import { readAnyDelimited, readDelimitedFile, spreadsheetRows, toCsv, toTsv } from './src/delimited.ts';
 import type { Rows } from './src/delimited.ts';
+import { tableToHtml, tableToPlainRows } from './src/html.ts';
+import { jsonToRows } from './src/json.ts';
 import {
   DEFAULT_TABLE_OPTIONS,
   findTable,
@@ -13,8 +15,52 @@ import {
   unquote,
 } from './src/markdown.ts';
 import type { TableOptions } from './src/markdown.ts';
+import {
+  cellStart,
+  deleteColumn,
+  deleteRow,
+  insertColumn,
+  insertRow,
+  isError,
+  moveColumn,
+  moveRow,
+  setAlignment,
+} from './src/tabletools.ts';
+import type { Outcome } from './src/tabletools.ts';
 import { columnAt, readTable, sortBody, transpose, writeTable } from './src/transform.ts';
-import type { SourceTable } from './src/transform.ts';
+import type { Align, SourceTable } from './src/transform.ts';
+
+const ALIGNMENTS: Align[] = ['none', 'left', 'center', 'right'];
+
+/**
+ * A table action: one entry gives a command, a context-menu item and a row
+ * in the "Table tools" picker, so the three cannot drift apart.
+ */
+interface TableAction {
+  id: string;
+  name: string;
+  icon: string;
+  /** Shown straight in the editor's context menu, not only in the picker. */
+  menu?: boolean;
+  run: (table: SourceTable, row: number, column: number) => Outcome;
+}
+
+const TABLE_ACTIONS: TableAction[] = [
+  { id: 'insert-row-above', name: 'Insert row above', icon: 'between-horizontal-start', run: (t, r) => insertRow(t, r, 'above') },
+  { id: 'insert-row-below', name: 'Insert row below', icon: 'between-horizontal-end', menu: true, run: (t, r) => insertRow(t, r, 'below') },
+  { id: 'delete-row', name: 'Delete row', icon: 'trash-2', menu: true, run: (t, r, c) => deleteRow(t, r, c) },
+  { id: 'move-row-up', name: 'Move row up', icon: 'arrow-up', run: (t, r, c) => moveRow(t, r, 'up', c) },
+  { id: 'move-row-down', name: 'Move row down', icon: 'arrow-down', run: (t, r, c) => moveRow(t, r, 'down', c) },
+  { id: 'insert-column-left', name: 'Insert column left', icon: 'between-vertical-start', run: (t, r, c) => insertColumn(t, c, 'left', r) },
+  { id: 'insert-column-right', name: 'Insert column right', icon: 'between-vertical-end', menu: true, run: (t, r, c) => insertColumn(t, c, 'right', r) },
+  { id: 'delete-column', name: 'Delete column', icon: 'trash', menu: true, run: (t, r, c) => deleteColumn(t, c, r) },
+  { id: 'move-column-left', name: 'Move column left', icon: 'arrow-left', run: (t, r, c) => moveColumn(t, c, 'left', r) },
+  { id: 'move-column-right', name: 'Move column right', icon: 'arrow-right', run: (t, r, c) => moveColumn(t, c, 'right', r) },
+  { id: 'align-column-left', name: 'Align column left', icon: 'align-left', run: (t, r, c) => setAlignment(t, c, 'left', r) },
+  { id: 'align-column-center', name: 'Align column center', icon: 'align-center', run: (t, r, c) => setAlignment(t, c, 'center', r) },
+  { id: 'align-column-right', name: 'Align column right', icon: 'align-right', run: (t, r, c) => setAlignment(t, c, 'right', r) },
+  { id: 'align-column-none', name: 'Clear column alignment', icon: 'remove-formatting', run: (t, r, c) => setAlignment(t, c, 'none', r) },
+];
 
 interface SpreadsheetToTableSettings extends TableOptions {
   /** Turn copied cells into a table on an ordinary paste. */
@@ -131,7 +177,161 @@ export default class SpreadsheetToTablePlugin extends Plugin {
       editorCheckCallback: (checking, editor) => this.reshape(checking, editor, (table) => transpose(table), 'Transposed'),
     });
 
+    this.addCommand({
+      id: 'copy-table-as-rich-text',
+      name: 'Copy table as rich text',
+      icon: 'clipboard-type',
+      editorCheckCallback: (checking, editor) => {
+        const table = this.tableToCopy(editor);
+        if (!table) return false;
+        if (!checking) void this.copyRich(table);
+        return true;
+      },
+    });
+    this.addCommand({
+      id: 'convert-json-to-table',
+      name: 'Convert JSON array to table',
+      icon: 'braces',
+      editorCheckCallback: (checking, editor) => {
+        if (!editor.somethingSelected()) return false;
+        const rows = jsonToRows(editor.getSelection());
+        if (!rows) return false;
+        if (!checking) this.insertTable(editor, rows);
+        return true;
+      },
+    });
+
+    for (const action of TABLE_ACTIONS) {
+      this.addCommand({
+        id: action.id,
+        name: action.name,
+        icon: action.icon,
+        editorCheckCallback: (checking, editor) => this.editTable(checking, editor, action),
+      });
+    }
+    this.addCommand({
+      id: 'table-tools',
+      name: 'Table tools',
+      icon: 'table-properties',
+      editorCheckCallback: (checking, editor) => {
+        if (!this.hasTable(editor)) return false;
+        if (!checking) this.openTableTools(editor);
+        return true;
+      },
+    });
+    this.registerEvent(
+      this.app.workspace.on('editor-menu', (menu, editor) => this.addTableMenu(menu, editor)),
+    );
+
     this.addSettingTab(new SpreadsheetToTableSettingTab(this.app, this));
+  }
+
+  /** The context menu: a few quick table actions and a way to the rest. */
+  private addTableMenu(menu: Menu, editor: Editor): void {
+    if (!this.hasTable(editor)) return;
+    menu.addSeparator();
+    for (const action of TABLE_ACTIONS.filter((a) => a.menu)) {
+      menu.addItem((item) =>
+        item
+          .setSection('table-tools')
+          .setTitle(`Table: ${action.name.toLowerCase()}`)
+          .setIcon(action.icon)
+          .onClick(() => this.editTable(false, editor, action)),
+      );
+    }
+    menu.addItem((item) =>
+      item
+        .setSection('table-tools')
+        .setTitle('Table: more tools...')
+        .setIcon('table-properties')
+        .onClick(() => this.openTableTools(editor)),
+    );
+  }
+
+  private openTableTools(editor: Editor): void {
+    new TableToolPicker(this.app, (action) => this.editTable(false, editor, action)).open();
+  }
+
+  private hasTable(editor: Editor): boolean {
+    const lines = this.lines(editor);
+    const found = findTable(lines, editor.getCursor().line);
+    return found !== null && !inCodeOrFrontmatter(lines.slice(0, found.start + 1).join('\n'));
+  }
+
+  /**
+   * Applies a row or column action to the table under the cursor, as one
+   * edit, so one undo puts it back. The table keeps its quote or callout
+   * markers and indentation, and the cursor lands in a sensible cell.
+   */
+  private editTable(checking: boolean, editor: Editor, action: TableAction): boolean {
+    const cursor = editor.getCursor();
+    const raw = editor.getValue().split('\n');
+    const lines = raw.map(unquote);
+    const found = findTable(lines, cursor.line);
+    if (!found || inCodeOrFrontmatter(lines.slice(0, found.start + 1).join('\n'))) return false;
+    if (checking) return true;
+
+    const markers = raw[found.start].slice(0, raw[found.start].length - lines[found.start].length);
+    const indent = /^[ \t]*/.exec(lines[found.start])?.[0] ?? '';
+    const cursorLine = lines[cursor.line];
+    const column = columnAt(cursorLine, cursor.ch - (raw[cursor.line].length - cursorLine.length));
+    const table = readTable(lines.slice(found.start, found.end + 1));
+    const row = cursor.line - found.start;
+    const outcome = action.run(table, row, Math.min(column, table.header.length - 1));
+    if (isError(outcome)) {
+      new Notice(outcome.error);
+      return true;
+    }
+
+    const written = writeTable(outcome.table, this.settings.padColumns);
+    const text = written.map((line) => markers + indent + line).join('\n');
+    const line = found.start + Math.min(Math.max(outcome.row, 0), written.length - 1);
+    const ch = markers.length + indent.length + cellStart(written[Math.min(Math.max(outcome.row, 0), written.length - 1)], outcome.column);
+    editor.transaction({
+      changes: [{ from: { line: found.start, ch: 0 }, to: { line: found.end, ch: raw[found.end].length }, text }],
+      selection: { from: { line, ch } },
+    });
+    return true;
+  }
+
+  /**
+   * The table to copy: the one the selection holds, or else the one the
+   * cursor is in.
+   */
+  private tableToCopy(editor: Editor): SourceTable | null {
+    if (editor.somethingSelected()) {
+      const selected = editor.getSelection().split('\n').map(unquote);
+      const found = findTable(selected, 0);
+      if (found && found.start === 0) return readTable(selected.slice(0, found.end + 1));
+    }
+    const lines = this.lines(editor);
+    const found = findTable(lines, editor.getCursor().line);
+    if (!found || inCodeOrFrontmatter(lines.slice(0, found.start + 1).join('\n'))) return null;
+    return readTable(lines.slice(found.start, found.end + 1));
+  }
+
+  /**
+   * Puts the table on the clipboard as HTML, so Docs, Word or an email
+   * pastes a real table, with tab-separated text beside it for anything
+   * that only takes text.
+   */
+  private async copyRich(table: SourceTable): Promise<void> {
+    const rows = tableToPlainRows(table);
+    const plain = toTsv(rows);
+    try {
+      if (typeof ClipboardItem === 'undefined') throw new Error('no ClipboardItem');
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          'text/html': new Blob([tableToHtml(table)], { type: 'text/html' }),
+          'text/plain': new Blob([plain], { type: 'text/plain' }),
+        }),
+      ]);
+    } catch {
+      // Where rich copying is off limits, the text version still goes.
+      await this.copyText(plain, rows, 'Rich text is not available here, so it was copied as plain text.');
+      return;
+    }
+    new Notice(`Copied ${count(rows.length, 'row')} as a table. Paste it into Docs, Word or an email.`);
   }
 
   /**
@@ -200,6 +400,7 @@ export default class SpreadsheetToTablePlugin extends Plugin {
     // edited by hand, so it is merged over the defaults rather than trusted.
     const stored = (await this.loadData()) as Partial<SpreadsheetToTableSettings> | null;
     this.settings = { ...DEFAULT_SETTINGS, ...stored };
+    if (!ALIGNMENTS.includes(this.settings.defaultAlign)) this.settings.defaultAlign = 'none';
   }
 
   async saveSettings() {
@@ -402,6 +603,26 @@ class DelimitedFilePicker extends FuzzySuggestModal<TFile> {
   }
 }
 
+/** Every table action in a list, for when the context menu only shows a few. */
+class TableToolPicker extends FuzzySuggestModal<TableAction> {
+  constructor(app: App, private readonly onPick: (action: TableAction) => void) {
+    super(app);
+    this.setPlaceholder('Choose a table action');
+  }
+
+  getItems(): TableAction[] {
+    return TABLE_ACTIONS;
+  }
+
+  getItemText(action: TableAction): string {
+    return action.name;
+  }
+
+  onChooseItem(action: TableAction): void {
+    this.onPick(action);
+  }
+}
+
 /** The table as text, selected, for when it cannot be put on the clipboard. */
 class CopyBox extends Modal {
   constructor(app: App, private readonly text: string) {
@@ -430,7 +651,7 @@ function count(n: number, noun: string): string {
   return `${n} ${noun}${n === 1 ? '' : 's'}`;
 }
 
-type SettingKey = keyof SpreadsheetToTableSettings;
+type SettingKey = Exclude<keyof SpreadsheetToTableSettings, 'defaultAlign'>;
 
 interface SettingRow {
   key: SettingKey;
@@ -467,6 +688,12 @@ const SETTINGS: SettingRow[] = [
   },
 ];
 
+const ALIGN_SETTING = {
+  name: 'Default column alignment',
+  desc: 'Alignment of columns that are not numbers when text is converted to a table. Number columns stay right-aligned when that setting is on.',
+  options: { none: 'None', left: 'Left', center: 'Center', right: 'Right' } as Record<string, string>,
+};
+
 class SpreadsheetToTableSettingTab extends PluginSettingTab {
   constructor(app: App, private plugin: SpreadsheetToTablePlugin) {
     super(app, plugin);
@@ -478,19 +705,35 @@ class SpreadsheetToTableSettingTab extends PluginSettingTab {
    * versions do not know this method and call `display()` instead.
    */
   getSettingDefinitions(): SettingDefinitionItem[] {
-    return SETTINGS.map((row) => ({
-      name: row.name,
-      desc: row.desc,
-      control: { type: 'toggle' as const, key: row.key, defaultValue: DEFAULT_SETTINGS[row.key] },
-    }));
+    return [
+      ...SETTINGS.map((row) => ({
+        name: row.name,
+        desc: row.desc,
+        control: { type: 'toggle' as const, key: row.key, defaultValue: DEFAULT_SETTINGS[row.key] },
+      })),
+      {
+        name: ALIGN_SETTING.name,
+        desc: ALIGN_SETTING.desc,
+        control: {
+          type: 'dropdown' as const,
+          key: 'defaultAlign',
+          defaultValue: DEFAULT_SETTINGS.defaultAlign,
+          options: ALIGN_SETTING.options,
+        },
+      },
+    ];
   }
 
   getControlValue(key: string): unknown {
-    return this.plugin.settings[key as SettingKey];
+    return this.plugin.settings[key as keyof SpreadsheetToTableSettings];
   }
 
   async setControlValue(key: string, value: unknown): Promise<void> {
-    Object.assign(this.plugin.settings, { [key]: value === true });
+    if (key === 'defaultAlign') {
+      this.plugin.settings.defaultAlign = ALIGNMENTS.includes(value as Align) ? (value as Align) : 'none';
+    } else {
+      Object.assign(this.plugin.settings, { [key]: value === true });
+    }
     await this.plugin.saveSettings();
   }
 
@@ -507,5 +750,14 @@ class SpreadsheetToTableSettingTab extends PluginSettingTab {
           toggle.setValue(this.plugin.settings[row.key]).onChange((value) => this.setControlValue(row.key, value));
         });
     }
+    new Setting(containerEl)
+      .setName(ALIGN_SETTING.name)
+      .setDesc(ALIGN_SETTING.desc)
+      .addDropdown((dropdown) => {
+        dropdown
+          .addOptions(ALIGN_SETTING.options)
+          .setValue(this.plugin.settings.defaultAlign)
+          .onChange((value) => this.setControlValue('defaultAlign', value));
+      });
   }
 }

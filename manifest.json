@@ -1,9 +1,9 @@
 {
   "id": "spreadsheet-to-table",
   "name": "Spreadsheet to Table",
-  "version": "0.3.0",
-  "minAppVersion": "0.15.3",
-  "description": "Paste cells from Excel, Google Sheets, Numbers or LibreOffice Calc as a Markdown table with a real header row. Also converts CSV or tab-separated text, and copies a table back out for a spreadsheet.",
+  "version": "0.4.0",
+  "minAppVersion": "0.16.2",
+  "description": "Table tools for Markdown notes: paste cells from Excel or Google Sheets with a real header row, add, move and delete rows and columns, sort, align, and copy a table as rich text, CSV or for a spreadsheet.",
   "author": "Siulved54",
   "authorUrl": "https://github.com/perezamadorluisenrique-gif",
   "isDesktopOnly": false

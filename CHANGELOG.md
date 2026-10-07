@@ -4,6 +4,21 @@ The release workflow uses the section named after the version being released
 as the release description, so every version needs one. `npm version <x.y.z>`
 renames the `Unreleased` heading below to that version.
 
+## 0.4.0
+
+- **Copy table as rich text**: copies the table under the cursor, or the one in
+  your selection, as a real HTML table plus tab-separated text, so it pastes as
+  a table in Google Docs, Word or an email. Bold, italic, code and links are
+  kept, the header row is header cells, and column alignment carries over.
+- **Row and column commands**: insert row above/below, delete, move up/down;
+  insert column left/right, delete, move left/right; set column alignment.
+  One undo each, the cursor stays in a sensible cell, and the header can't be
+  deleted or moved. They are also in the editor's right-click menu and in a
+  **Table tools** list for the phone.
+- **Default column alignment** setting for converted tables.
+- **Convert JSON array to table** for a selected array of objects.
+- Needs Obsidian 0.16.2 or later (was 0.15.3) for menu icons.
+
 ## 0.3.0
 
 - **Sort a table by a column**: *Sort table by this column, ascending* and
