@@ -2,6 +2,7 @@
 // working out where one may go in a note.
 
 import type { Rows } from './delimited.ts';
+import type { Align } from './transform.ts';
 
 export interface TableOptions {
   /** The first row is the header. Otherwise the header row is left empty. */
@@ -10,12 +11,15 @@ export interface TableOptions {
   alignNumbers: boolean;
   /** Pad cells so the columns line up in the source. */
   padColumns: boolean;
+  /** Alignment of a column that is not right-aligned for being numbers. */
+  defaultAlign: Align;
 }
 
 export const DEFAULT_TABLE_OPTIONS: TableOptions = {
   firstRowIsHeader: true,
   alignNumbers: true,
   padColumns: true,
+  defaultAlign: 'none',
 };
 
 /**
@@ -59,11 +63,13 @@ export function toMarkdownTable(input: Rows, options: TableOptions = DEFAULT_TAB
   const header = options.firstRowIsHeader && rows.length > 0 ? rows[0] : new Array<string>(columns).fill('');
   const body = options.firstRowIsHeader ? rows.slice(1) : rows;
 
-  const right: boolean[] = [];
+  const align: Align[] = [];
   for (let c = 0; c < columns; c++) {
     const filled = body.map((row) => row[c]).filter((cell) => cell !== '');
-    right.push(options.alignNumbers && filled.length > 0 && filled.every(isNumber));
+    const numbers = options.alignNumbers && filled.length > 0 && filled.every(isNumber);
+    align.push(numbers ? 'right' : (options.defaultAlign ?? 'none'));
   }
+  const right = align.map((a) => a === 'right');
 
   // Three dashes is the least a delimiter cell can have and still read as one
   // in every Markdown flavour, so no column is narrower than that.
@@ -82,8 +88,9 @@ export function toMarkdownTable(input: Rows, options: TableOptions = DEFAULT_TAB
       })
       .join(' | ') +
     ' |';
-  const delimiter =
-    '| ' + widths.map((w, c) => (right[c] ? '-'.repeat(Math.max(3, w) - 1) + ':' : '-'.repeat(w))).join(' | ') + ' |';
+  const dashes = (w: number, a: Align) =>
+    a === 'right' ? '-'.repeat(w - 1) + ':' : a === 'left' ? ':' + '-'.repeat(w - 1) : a === 'center' ? ':' + '-'.repeat(w - 2) + ':' : '-'.repeat(w);
+  const delimiter = '| ' + widths.map((w, c) => dashes(w, align[c])).join(' | ') + ' |';
 
   return [line(header), delimiter, ...body.map(line)].join('\n');
 }

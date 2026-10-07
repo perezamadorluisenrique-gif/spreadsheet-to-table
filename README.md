@@ -1,5 +1,9 @@
 # Spreadsheet to Table
 
+Table tools for Markdown notes: paste spreadsheet cells as a table, edit rows
+and columns from commands (so it works in source mode and on a phone), sort,
+align, and copy a table out as rich text, CSV or spreadsheet cells.
+
 Copy cells in Excel, Google Sheets, Numbers or LibreOffice Calc, paste them
 into a note, and get a Markdown table, **with the first row as its header**.
 
@@ -49,6 +53,20 @@ handles both, and:
 | Save table as CSV file | Writes the table under the cursor to a `.csv` file next to the note, named after it. Nothing already there is overwritten. |
 | Sort table by this column, ascending / descending | Sorts the rows of the table under the cursor by the column the cursor is in. Numbers sort as numbers (`1,234.50`, `12%`, `$40`, `(7)`), text sorts naturally (`item 9` before `item 10`, case aside), and empty cells go last. The header stays on top. |
 | Transpose table (swap rows and columns) | The first column becomes the header row, and each row a column. |
+| Copy table as rich text | Copies the table (or the table in your selection) as a real HTML table, plus tab-separated text. It pastes as a table in Google Docs, Word or an email, with **bold**, *italic*, `code` and links kept, the header row as header cells and column alignment. Falls back to plain text where the clipboard won't take HTML. The note is not changed. |
+| Convert JSON array to table | Turns a selected JSON array of objects (or of arrays) into a table: the keys are the header, a missing key leaves an empty cell, nested values stay as compact JSON. |
+| Insert row above / below, Delete row, Move row up / down | Edit the row under the cursor. The header row can't be deleted, moved or have a row inserted above it, and the only body row can't be deleted. |
+| Insert column left / right, Delete column, Move column left / right | Edit the column under the cursor. The last column can't be deleted. Alignment travels with the column. |
+| Align column left / center / right, Clear column alignment | Sets the alignment of the column under the cursor. |
+| Table tools | Opens a searchable list of all the table actions above, for phones and tablets. |
+
+Every row and column action is one edit (one undo), keeps the table inside its
+callout, quote or list item, lines the columns up per your settings, and leaves
+the cursor in the cell you'd expect. They are commands, so they work in source
+mode and Live Preview, and every command has an icon, so you can put them on
+the mobile toolbar (**Settings → Mobile → Manage toolbar options**). Right-click
+inside a table in the editor for the quick ones (insert row below, insert column
+right, delete row, delete column) and **Table: more tools...**.
 
 None has a hotkey by default; assign one in **Settings → Hotkeys**.
 
@@ -73,6 +91,7 @@ A converted paste is one edit, so a single **undo** takes the table out again.
 | First row is the header | On | Off leaves the header row empty, as Obsidian does. |
 | Right-align numbers | On | A column is right-aligned when every cell below the header is a number. |
 | Line up columns | On | Off writes compact tables with no padding. |
+| Default column alignment | None | Alignment of columns that are not numbers when text is converted. Number columns still follow *Right-align numbers*. |
 
 ## Coming from Excel to Markdown Table
 
