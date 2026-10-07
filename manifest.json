@@ -1,7 +1,7 @@
 {
   "id": "spreadsheet-to-table",
   "name": "Spreadsheet to Table",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "minAppVersion": "0.16.2",
   "description": "Table tools for Markdown notes: paste cells from Excel or Google Sheets with a real header row, add, move and delete rows and columns, sort, align, and copy a table as rich text, CSV or for a spreadsheet.",
   "author": "Siulved54",

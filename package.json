@@ -1,6 +1,6 @@
 {
   "name": "spreadsheet-to-table",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Table tools for Markdown notes: paste spreadsheet cells as a table, edit rows and columns, sort, and copy a table as rich text or CSV.",
   "main": "main.js",
   "scripts": {
