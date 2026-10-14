@@ -40,10 +40,48 @@ export function isNumber(cell: string): boolean {
  * Obsidian renders as a line break inside the cell.
  */
 export function escapeCell(cell: string): string {
-  return cell
-    .trim()
-    .replace(/\|/g, '\\|')
-    .replace(/\r\n|\r|\n/g, '<br>');
+  return escapeLoneBackticks(
+    cell
+      .trim()
+      .replace(/\|/g, '\\|')
+      .replace(/\r\n|\r|\n/g, '<br>'),
+  );
+}
+
+/**
+ * A backtick in a cell that opens no code span of its own (`it`s`) is
+ * written as `\``, which shows as a backtick. Left bare, it would pair with
+ * a backtick in a later cell, and everything between, pipes included, would
+ * read as one cell of code.
+ */
+function escapeLoneBackticks(cell: string): string {
+  let out = '';
+  let i = 0;
+  while (i < cell.length) {
+    if (cell[i] !== '`') {
+      out += cell[i++];
+      continue;
+    }
+    let run = 1;
+    while (cell[i + run] === '`') run++;
+    const close = closingRun(cell, i + run, run);
+    if (close === -1) {
+      out += '\\`'.repeat(run);
+      i += run;
+    } else {
+      out += cell.slice(i, close + run);
+      i = close + run;
+    }
+  }
+  return out;
+}
+
+/** Where the next run of exactly `run` backticks starts, at `from` or later, or -1. */
+function closingRun(text: string, from: number, run: number): number {
+  const runs = /`+/g;
+  runs.lastIndex = from;
+  for (let m = runs.exec(text); m; m = runs.exec(text)) if (m[0].length === run) return m.index;
+  return -1;
 }
 
 /** Width as the eye counts it in a monospaced editor, near enough: code points. */
@@ -98,6 +136,15 @@ export function toMarkdownTable(input: Rows, options: TableOptions = DEFAULT_TAB
 const DELIMITER_ROW = /^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$/;
 
 /**
+ * Whether a run of `run` backticks closes later in `text`, from `from` on:
+ * a run of exactly that length. One that never closes is literal backticks,
+ * not the start of inline code, so the pipes after it still split cells.
+ */
+export function codeSpanCloses(text: string, from: number, run: number): boolean {
+  return closingRun(text, from, run) !== -1;
+}
+
+/**
  * Splits one table row into cells. A pipe ends a cell unless it is escaped
  * with a backslash or sits inside inline code.
  */
@@ -109,13 +156,13 @@ export function splitRow(line: string): string[] {
   let code = 0; // length of the backtick run that opened the code span, or 0
   for (let i = 0; i < text.length; i++) {
     const ch = text[i];
-    if (ch === '\\' && text[i + 1] === '|') {
-      cell += '\\|';
+    if (ch === '\\' && (text[i + 1] === '|' || (text[i + 1] === '`' && code === 0))) {
+      cell += ch + text[i + 1];
       i++;
     } else if (ch === '`') {
       let run = 1;
       while (text[i + run] === '`') run++;
-      if (code === 0) code = run;
+      if (code === 0) code = codeSpanCloses(text, i + run, run) ? run : 0;
       else if (run === code) code = 0;
       cell += '`'.repeat(run);
       i += run - 1;
@@ -133,10 +180,34 @@ export function splitRow(line: string): string[] {
 
 /** A table cell's source back to the text it shows: pipes unescaped, `<br>` as line breaks. */
 export function unescapeCell(cell: string): string {
-  return cell
-    .trim()
-    .replace(/\\\|/g, '|')
-    .replace(/<br\s*\/?>/gi, '\n');
+  return unescapeBackticks(
+    cell
+      .trim()
+      .replace(/\\\|/g, '|')
+      .replace(/<br\s*\/?>/gi, '\n'),
+  );
+}
+
+/** `\`` back to a backtick, outside code spans, where a backslash is just a backslash. */
+function unescapeBackticks(cell: string): string {
+  let out = '';
+  let i = 0;
+  while (i < cell.length) {
+    if (cell[i] === '\\' && cell[i + 1] === '`') {
+      out += '`';
+      i += 2;
+    } else if (cell[i] === '`') {
+      let run = 1;
+      while (cell[i + run] === '`') run++;
+      const close = closingRun(cell, i + run, run);
+      const end = close === -1 ? i + run : close + run;
+      out += cell.slice(i, end);
+      i = end;
+    } else {
+      out += cell[i++];
+    }
+  }
+  return out;
 }
 
 /**
@@ -168,7 +239,8 @@ export function tableRows(lines: string[]): string[][] {
 }
 
 /**
- * Whether a position is inside a fenced code block or the frontmatter, where
+ * Whether a position is inside a fenced code block (in a callout or a list
+ * item too) or the frontmatter, where
  * a paste has to stay exactly as copied. `before` is the note's text up to
  * the position.
  */
@@ -179,20 +251,30 @@ export function inCodeOrFrontmatter(before: string): boolean {
     const closed = lines.slice(1, -1).some((line) => /^(---|\.\.\.)\s*$/.test(line));
     if (!closed) return true;
   }
-  let fence: { char: string; length: number } | null = null;
+  let fence: { char: string; length: number; depth: number } | null = null;
+  const depth = (line: string) => (/^(?:[ \t]*>[ \t]?)*/.exec(line)?.[0] ?? '').split('>').length - 1;
   // The line holding the position is left out: an opening fence on it is
   // text being typed after, and a closing one means the position is past it.
+  // A fence may sit in a quote or callout (`> ````) or under a list item; a
+  // block opened in a quote ends with it, closed or not.
   for (const line of lines.slice(0, -1)) {
-    const m = /^ {0,3}(`{3,}|~{3,})/.exec(line);
+    if (fence && depth(line) < fence.depth) fence = null;
+    const m = /^(?:[ \t]*>[ \t]?)*[ \t]*(?:(?:[-*+]|\d{1,9}[.)])[ \t]+)?(`{3,}|~{3,})/.exec(line);
     if (!m) continue;
     const char = m[1][0];
     if (!fence) {
       if (char === '`' && line.slice(m[0].length).includes('`')) continue;
-      fence = { char, length: m[1].length };
-    } else if (char === fence.char && m[1].length >= fence.length && line.slice(m[0].length).trim() === '') {
+      fence = { char, length: m[1].length, depth: depth(line) };
+    } else if (
+      char === fence.char &&
+      m[1].length >= fence.length &&
+      line.slice(m[0].length).trim() === '' &&
+      depth(line) === fence.depth
+    ) {
       fence = null;
     }
   }
+  if (fence && depth(lines[lines.length - 1]) < fence.depth) return false;
   return fence !== null;
 }
 

@@ -3,6 +3,7 @@
 // `row` is the table line: 0 header, 1 the delimiter row, 2 and on the body.
 
 import { t } from './i18n.ts';
+import { codeSpanCloses } from './markdown.ts';
 import type { Align, SourceTable } from './transform.ts';
 
 export interface Edit {
@@ -105,12 +106,15 @@ export function cellStart(line: string, column: number): number {
   let code = 0;
   for (let i = 0; i < line.length; i++) {
     const ch = line[i];
-    if (ch === '\\') {
+    // Read the way `splitRow` reads it: a backslash only escapes a pipe, or a
+    // backtick outside code, and a backtick run that never closes is text.
+    if (ch === '\\' && (line[i + 1] === '|' || (line[i + 1] === '`' && code === 0))) {
       i++;
     } else if (ch === '`') {
       let run = 1;
       while (line[i + run] === '`') run++;
-      code = code === 0 ? run : code === run ? 0 : code;
+      if (code === 0) code = codeSpanCloses(line, i + run, run) ? run : 0;
+      else if (code === run) code = 0;
       i += run - 1;
     } else if (ch === '|' && code === 0) {
       if (pipes === column) return Math.min(line.length, line[i + 1] === ' ' ? i + 2 : i + 1);
