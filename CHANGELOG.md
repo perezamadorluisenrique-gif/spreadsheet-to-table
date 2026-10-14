@@ -4,6 +4,11 @@ The release workflow uses the section named after the version being released
 as the release description, so every version needs one. `npm version <x.y.z>`
 renames the `Unreleased` heading below to that version.
 
+## Unreleased
+
+- A table pasted under a callout's title now has a blank quote line before it, so it shows as a table in older Obsidian versions too (1.0 showed it as plain text).
+- Commands show an icon on the mobile toolbar in older Obsidian versions too.
+
 ## 0.5.1
 
 - A cell with a stray backtick (it`s) no longer swallows the cells after it when a table is sorted, transposed or copied.

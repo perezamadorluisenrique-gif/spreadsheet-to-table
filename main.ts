@@ -1,4 +1,4 @@
-import { App, Editor, FuzzySuggestModal, Menu, Modal, Notice, Plugin, PluginSettingTab, Setting, TFile, normalizePath } from 'obsidian';
+import { App, Editor, FuzzySuggestModal, Menu, Modal, Notice, Plugin, PluginSettingTab, Setting, TFile, getIcon, normalizePath } from 'obsidian';
 import type { SettingDefinitionItem } from 'obsidian';
 
 import { readAnyDelimited, readDelimitedFile, spreadsheetRows, toCsv, toTsv } from './src/delimited.ts';
@@ -31,6 +31,28 @@ import { columnAt, readTable, sortBody, transpose, writeTable } from './src/tran
 import type { Align, SourceTable } from './src/transform.ts';
 import { t } from './src/i18n.ts';
 
+/** Older names (or the nearest icon) for Lucide icons that older Obsidian versions lack. */
+const OLDER_ICONS: Record<string, string> = {
+  'arrow-down-az': 'sort-asc',
+  'arrow-up-za': 'sort-desc',
+  'arrow-down-up': 'rotate-cw',
+  'between-horizontal-start': 'list-plus',
+  'between-horizontal-end': 'list-plus',
+  'between-vertical-start': 'columns',
+  'between-vertical-end': 'columns',
+  braces: 'curly-braces',
+  'clipboard-paste': 'clipboard',
+  'remove-formatting': 'eraser',
+  'table-properties': 'table',
+};
+
+/** `name`, or its older counterpart when this Obsidian's icon set does not have it: an unknown icon draws nothing. */
+function lucide(name: string): string {
+  const older = OLDER_ICONS[name];
+  return older && !getIcon(name) ? older : name;
+}
+
+
 const ALIGNMENTS: Align[] = ['none', 'left', 'center', 'right'];
 
 /**
@@ -47,20 +69,20 @@ interface TableAction {
 }
 
 const TABLE_ACTIONS: TableAction[] = [
-  { id: 'insert-row-above', name: t('action.insertRowAbove'), icon: 'between-horizontal-start', run: (t, r) => insertRow(t, r, 'above') },
-  { id: 'insert-row-below', name: t('action.insertRowBelow'), icon: 'between-horizontal-end', menu: t('menu.insertRowBelow'), run: (t, r) => insertRow(t, r, 'below') },
-  { id: 'delete-row', name: t('action.deleteRow'), icon: 'trash-2', menu: t('menu.deleteRow'), run: (t, r, c) => deleteRow(t, r, c) },
-  { id: 'move-row-up', name: t('action.moveRowUp'), icon: 'arrow-up', run: (t, r, c) => moveRow(t, r, 'up', c) },
-  { id: 'move-row-down', name: t('action.moveRowDown'), icon: 'arrow-down', run: (t, r, c) => moveRow(t, r, 'down', c) },
-  { id: 'insert-column-left', name: t('action.insertColumnLeft'), icon: 'between-vertical-start', run: (t, r, c) => insertColumn(t, c, 'left', r) },
-  { id: 'insert-column-right', name: t('action.insertColumnRight'), icon: 'between-vertical-end', menu: t('menu.insertColumnRight'), run: (t, r, c) => insertColumn(t, c, 'right', r) },
-  { id: 'delete-column', name: t('action.deleteColumn'), icon: 'trash', menu: t('menu.deleteColumn'), run: (t, r, c) => deleteColumn(t, c, r) },
-  { id: 'move-column-left', name: t('action.moveColumnLeft'), icon: 'arrow-left', run: (t, r, c) => moveColumn(t, c, 'left', r) },
-  { id: 'move-column-right', name: t('action.moveColumnRight'), icon: 'arrow-right', run: (t, r, c) => moveColumn(t, c, 'right', r) },
-  { id: 'align-column-left', name: t('action.alignLeft'), icon: 'align-left', run: (t, r, c) => setAlignment(t, c, 'left', r) },
-  { id: 'align-column-center', name: t('action.alignCenter'), icon: 'align-center', run: (t, r, c) => setAlignment(t, c, 'center', r) },
-  { id: 'align-column-right', name: t('action.alignRight'), icon: 'align-right', run: (t, r, c) => setAlignment(t, c, 'right', r) },
-  { id: 'align-column-none', name: t('action.alignNone'), icon: 'remove-formatting', run: (t, r, c) => setAlignment(t, c, 'none', r) },
+  { id: 'insert-row-above', name: t('action.insertRowAbove'), icon: lucide('between-horizontal-start'), run: (t, r) => insertRow(t, r, 'above') },
+  { id: 'insert-row-below', name: t('action.insertRowBelow'), icon: lucide('between-horizontal-end'), menu: t('menu.insertRowBelow'), run: (t, r) => insertRow(t, r, 'below') },
+  { id: 'delete-row', name: t('action.deleteRow'), icon: lucide('trash-2'), menu: t('menu.deleteRow'), run: (t, r, c) => deleteRow(t, r, c) },
+  { id: 'move-row-up', name: t('action.moveRowUp'), icon: lucide('arrow-up'), run: (t, r, c) => moveRow(t, r, 'up', c) },
+  { id: 'move-row-down', name: t('action.moveRowDown'), icon: lucide('arrow-down'), run: (t, r, c) => moveRow(t, r, 'down', c) },
+  { id: 'insert-column-left', name: t('action.insertColumnLeft'), icon: lucide('between-vertical-start'), run: (t, r, c) => insertColumn(t, c, 'left', r) },
+  { id: 'insert-column-right', name: t('action.insertColumnRight'), icon: lucide('between-vertical-end'), menu: t('menu.insertColumnRight'), run: (t, r, c) => insertColumn(t, c, 'right', r) },
+  { id: 'delete-column', name: t('action.deleteColumn'), icon: lucide('trash'), menu: t('menu.deleteColumn'), run: (t, r, c) => deleteColumn(t, c, r) },
+  { id: 'move-column-left', name: t('action.moveColumnLeft'), icon: lucide('arrow-left'), run: (t, r, c) => moveColumn(t, c, 'left', r) },
+  { id: 'move-column-right', name: t('action.moveColumnRight'), icon: lucide('arrow-right'), run: (t, r, c) => moveColumn(t, c, 'right', r) },
+  { id: 'align-column-left', name: t('action.alignLeft'), icon: lucide('align-left'), run: (t, r, c) => setAlignment(t, c, 'left', r) },
+  { id: 'align-column-center', name: t('action.alignCenter'), icon: lucide('align-center'), run: (t, r, c) => setAlignment(t, c, 'center', r) },
+  { id: 'align-column-right', name: t('action.alignRight'), icon: lucide('align-right'), run: (t, r, c) => setAlignment(t, c, 'right', r) },
+  { id: 'align-column-none', name: t('action.alignNone'), icon: lucide('remove-formatting'), run: (t, r, c) => setAlignment(t, c, 'none', r) },
 ];
 
 interface SpreadsheetToTableSettings extends TableOptions {
@@ -90,7 +112,7 @@ export default class SpreadsheetToTablePlugin extends Plugin {
     this.addCommand({
       id: 'paste-as-table',
       name: t('command.pasteAsTable'),
-      icon: 'clipboard-paste',
+      icon: lucide('clipboard-paste'),
       editorCallback: (editor) => {
         void this.pasteAsTable(editor);
       },
@@ -98,7 +120,7 @@ export default class SpreadsheetToTablePlugin extends Plugin {
     this.addCommand({
       id: 'convert-selection-to-table',
       name: t('command.convertSelection'),
-      icon: 'table',
+      icon: lucide('table'),
       editorCheckCallback: (checking, editor) => {
         if (!editor.somethingSelected()) return false;
         if (!checking) this.convertSelection(editor);
@@ -108,7 +130,7 @@ export default class SpreadsheetToTablePlugin extends Plugin {
     this.addCommand({
       id: 'copy-table-for-spreadsheet',
       name: t('command.copyForSpreadsheet'),
-      icon: 'clipboard-copy',
+      icon: lucide('clipboard-copy'),
       editorCheckCallback: (checking, editor) => {
         const rows = this.tableAtCursor(editor);
         if (!rows) return false;
@@ -120,7 +142,7 @@ export default class SpreadsheetToTablePlugin extends Plugin {
     this.addCommand({
       id: 'insert-csv-file',
       name: t('command.insertCsvFile'),
-      icon: 'file-spreadsheet',
+      icon: lucide('file-spreadsheet'),
       editorCallback: (editor) => {
         const files = this.app.vault.getFiles().filter((file) => /^(csv|tsv)$/i.test(file.extension));
         if (files.length === 0) {
@@ -137,7 +159,7 @@ export default class SpreadsheetToTablePlugin extends Plugin {
     this.addCommand({
       id: 'copy-table-as-csv',
       name: t('command.copyAsCsv'),
-      icon: 'clipboard-list',
+      icon: lucide('clipboard-list'),
       editorCheckCallback: (checking, editor) => {
         const rows = this.tableAtCursor(editor);
         if (!rows) return false;
@@ -148,7 +170,7 @@ export default class SpreadsheetToTablePlugin extends Plugin {
     this.addCommand({
       id: 'save-table-as-csv',
       name: t('command.saveAsCsv'),
-      icon: 'file-down',
+      icon: lucide('file-down'),
       editorCheckCallback: (checking, editor, ctx) => {
         const rows = this.tableAtCursor(editor);
         if (!rows || !ctx.file) return false;
@@ -160,28 +182,28 @@ export default class SpreadsheetToTablePlugin extends Plugin {
     this.addCommand({
       id: 'sort-table-ascending',
       name: t('command.sortAscending'),
-      icon: 'arrow-down-az',
+      icon: lucide('arrow-down-az'),
       editorCheckCallback: (checking, editor) =>
         this.reshape(checking, editor, (table, column) => ({ ...table, body: sortBody(table.body, column, false) }), 'sorted'),
     });
     this.addCommand({
       id: 'sort-table-descending',
       name: t('command.sortDescending'),
-      icon: 'arrow-up-za',
+      icon: lucide('arrow-up-za'),
       editorCheckCallback: (checking, editor) =>
         this.reshape(checking, editor, (table, column) => ({ ...table, body: sortBody(table.body, column, true) }), 'sorted'),
     });
     this.addCommand({
       id: 'transpose-table',
       name: t('command.transpose'),
-      icon: 'arrow-down-up',
+      icon: lucide('arrow-down-up'),
       editorCheckCallback: (checking, editor) => this.reshape(checking, editor, (table) => transpose(table), 'transposed'),
     });
 
     this.addCommand({
       id: 'copy-table-as-rich-text',
       name: t('command.copyAsRichText'),
-      icon: 'clipboard-type',
+      icon: lucide('clipboard-type'),
       editorCheckCallback: (checking, editor) => {
         const table = this.tableToCopy(editor);
         if (!table) return false;
@@ -192,7 +214,7 @@ export default class SpreadsheetToTablePlugin extends Plugin {
     this.addCommand({
       id: 'convert-json-to-table',
       name: t('command.convertJson'),
-      icon: 'braces',
+      icon: lucide('braces'),
       editorCheckCallback: (checking, editor) => {
         if (!editor.somethingSelected()) return false;
         const rows = jsonToRows(editor.getSelection());
@@ -213,7 +235,7 @@ export default class SpreadsheetToTablePlugin extends Plugin {
     this.addCommand({
       id: 'table-tools',
       name: t('command.tableTools'),
-      icon: 'table-properties',
+      icon: lucide('table-properties'),
       editorCheckCallback: (checking, editor) => {
         if (!this.hasTable(editor)) return false;
         if (!checking) this.openTableTools(editor);

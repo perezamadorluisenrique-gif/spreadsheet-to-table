@@ -136,8 +136,9 @@ test('puts the table on lines of its own, with blank lines around it', () => {
 test('a table pasted in a quote or callout stays inside it', () => {
   const t = '| a |\n| --- |\n| 1 |';
   const inQuote = '| a |\n> | --- |\n> | 1 |';
-  // Straight under a callout's title, on its empty second line.
-  assert.equal(placeBlock(t, '> ', '', '> [!note] Data', null), inQuote);
+  // Under a callout's title, after a blank quote line: Obsidian 1.0 at least
+  // shows a table straight under the title as plain text.
+  assert.equal(placeBlock(t, '> ', '', '> [!note] Data', null), '\n> ' + inQuote);
   // Under text in the callout: a blank quote line first, and one after
   // when more of the callout follows.
   assert.equal(placeBlock(t, '> ', '', '> Some text', '> More'), '\n> ' + inQuote + '\n>');

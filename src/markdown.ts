@@ -307,11 +307,6 @@ function isBlank(line: string | null): boolean {
   return line.replace(/^(?:[ \t]*>)*/, '').trim() === '';
 }
 
-/** A callout's title line, `> [!note] Title`, which a table may follow directly. */
-function isCalloutTitle(line: string | null): boolean {
-  return line !== null && /^(?:[ \t]*>)+[ \t]*\[![^\]]+\]/.test(line);
-}
-
 /**
  * The text to insert so a table lands as a block of its own: on its own
  * lines, with a blank line between it and any text around it, since a
@@ -342,7 +337,7 @@ export function placeBlock(
   if (text.trim() !== '') lead = '\n' + blank + newLine;
   // Straight after an empty list marker, `- `, the table is the item's
   // first block and starts on the marker's line.
-  else if (!listItem && !isBlank(lineAbove) && !isCalloutTitle(lineAbove)) lead = newLine;
+  else if (!listItem && !isBlank(lineAbove)) lead = newLine;
 
   let tail = '';
   if (after.trim() !== '') tail = '\n' + blank + newLine;
