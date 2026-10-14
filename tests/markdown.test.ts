@@ -170,3 +170,24 @@ test('default alignment applies to columns that are not numbers', () => {
   assert.equal(toMarkdownTable(rows, { ...base, defaultAlign: 'right', alignNumbers: false }).split('\n')[1], '| --: | --: |');
   assert.equal(toMarkdownTable(rows, base).split('\n')[1], '| --- | --: |');
 });
+
+test('a lone backtick in a cell does not swallow the cells after it', () => {
+  const lines = toMarkdownTable([['Word', 'Note'], ["it`s", 'a`b'], ['x', '`code`']]).split('\n');
+  assert.equal(lines[2], "| it\\`s | a\\`b   |");
+  assert.equal(lines[3], '| x     | `code` |');
+  assert.deepEqual(tableRows(lines), [['Word', 'Note'], ["it`s", 'a`b'], ['x', '`code`']]);
+  // Hand-written, an unclosed backtick is plain text too.
+  assert.deepEqual(splitRow('| a`b | c |'), [' a`b ', ' c ']);
+});
+
+test('a paste into code in a callout or a list item stays as it is', () => {
+  assert.equal(inCodeOrFrontmatter('> [!example]\n> ```\n> '), true);
+  assert.equal(inCodeOrFrontmatter('- item\n\t```\n\t'), true);
+  assert.equal(inCodeOrFrontmatter('> ```\n> code\n> ```\n> '), false);
+  // A block opened in a callout ends with the callout.
+  assert.equal(inCodeOrFrontmatter('> ```\n> code\n\n'), false);
+});
+
+test('a quoted fence inside a code block does not end it', () => {
+  assert.equal(inCodeOrFrontmatter('```md\n> ```\n'), true);
+});

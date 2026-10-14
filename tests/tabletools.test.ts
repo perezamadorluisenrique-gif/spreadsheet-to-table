@@ -89,3 +89,9 @@ test('cellStart finds the cell after its pipe, skipping escaped pipes and code',
   assert.equal(line.slice(cellStart(line, 2)), 'c |');
   assert.equal(cellStart('|  |  |', 1), 5);
 });
+
+test('cellStart agrees with the cell split on backticks and backslashes', () => {
+  const line = '| a`b | c | d\\\\ | e |';
+  assert.equal(line.slice(cellStart(line, 1)), 'c | d\\\\ | e |');
+  assert.equal(line.slice(cellStart(line, 3)), 'e |');
+});
