@@ -2,6 +2,7 @@
 // changed table and where the cursor should land, or a reason it refused.
 // `row` is the table line: 0 header, 1 the delimiter row, 2 and on the body.
 
+import { t } from './i18n.ts';
 import type { Align, SourceTable } from './transform.ts';
 
 export interface Edit {
@@ -24,7 +25,7 @@ const bodyIndex = (row: number) => row - 2;
 
 export function insertRow(table: SourceTable, row: number, where: 'above' | 'below'): Outcome {
   const at = bodyIndex(row);
-  if (at < 0 && where === 'above') return { error: 'A row cannot go above the header.' };
+  if (at < 0 && where === 'above') return { error: t('error.rowAboveHeader') };
   const index = at < 0 ? 0 : where === 'above' ? at : at + 1;
   const body = [...table.body];
   body.splice(index, 0, blankRow(columnsOf(table)));
@@ -33,18 +34,18 @@ export function insertRow(table: SourceTable, row: number, where: 'above' | 'bel
 
 export function deleteRow(table: SourceTable, row: number, column: number): Outcome {
   const at = bodyIndex(row);
-  if (at < 0) return { error: 'The header row cannot be deleted.' };
-  if (table.body.length <= 1) return { error: 'The last row of a table cannot be deleted.' };
+  if (at < 0) return { error: t('error.deleteHeader') };
+  if (table.body.length <= 1) return { error: t('error.deleteLastRow') };
   const body = table.body.filter((_, i) => i !== at);
   return { table: { ...table, body }, row: Math.min(at, body.length - 1) + 2, column };
 }
 
 export function moveRow(table: SourceTable, row: number, direction: 'up' | 'down', column: number): Outcome {
   const at = bodyIndex(row);
-  if (at < 0) return { error: 'The header row cannot be moved.' };
+  if (at < 0) return { error: t('error.moveHeader') };
   const to = direction === 'up' ? at - 1 : at + 1;
-  if (to < 0) return { error: 'The row is already the first one below the header.' };
-  if (to >= table.body.length) return { error: 'The row is already the last one.' };
+  if (to < 0) return { error: t('error.rowAlreadyFirst') };
+  if (to >= table.body.length) return { error: t('error.rowAlreadyLast') };
   const body = [...table.body];
   [body[at], body[to]] = [body[to], body[at]];
   return { table: { ...table, body }, row: to + 2, column };
@@ -69,15 +70,15 @@ export function insertColumn(table: SourceTable, column: number, where: 'left' |
 }
 
 export function deleteColumn(table: SourceTable, column: number, row: number): Outcome {
-  if (columnsOf(table) <= 1) return { error: 'The last column of a table cannot be deleted.' };
+  if (columnsOf(table) <= 1) return { error: t('error.deleteLastColumn') };
   const changed = mapColumns(table, (cells) => cells.filter((_, i) => i !== column));
   return { table: changed, row: Math.max(row, 0), column: Math.min(column, columnsOf(changed) - 1) };
 }
 
 export function moveColumn(table: SourceTable, column: number, direction: 'left' | 'right', row: number): Outcome {
   const to = direction === 'left' ? column - 1 : column + 1;
-  if (to < 0) return { error: 'The column is already the first one.' };
-  if (to >= columnsOf(table)) return { error: 'The column is already the last one.' };
+  if (to < 0) return { error: t('error.columnAlreadyFirst') };
+  if (to >= columnsOf(table)) return { error: t('error.columnAlreadyLast') };
   const changed = mapColumns(table, (cells) => {
     const copy = [...cells];
     [copy[column], copy[to]] = [copy[to], copy[column]];
@@ -88,7 +89,7 @@ export function moveColumn(table: SourceTable, column: number, direction: 'left'
 
 export function setAlignment(table: SourceTable, column: number, align: Align, row: number): Outcome {
   if (table.align[column] === align) {
-    return { error: align === 'none' ? 'The column has no alignment already.' : `The column is already aligned ${align}.` };
+    return { error: align === 'none' ? t('error.noAlignment') : t(`error.alreadyAligned.${align}`) };
   }
   const alignment = [...table.align];
   alignment[column] = align;
