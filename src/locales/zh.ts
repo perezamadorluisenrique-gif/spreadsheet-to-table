@@ -1,0 +1,102 @@
+import type { Messages } from '../i18n.ts';
+
+const zh: Messages = {
+  // Commands
+  'command.pasteAsTable': '粘贴为表格',
+  'command.convertSelection': '将所选内容转换为表格',
+  'command.copyForSpreadsheet': '复制表格以便粘贴到电子表格',
+  'command.insertCsvFile': '将 CSV 文件插入为表格',
+  'command.copyAsCsv': '将表格复制为 CSV',
+  'command.saveAsCsv': '将表格保存为 CSV 文件',
+  'command.sortAscending': '按此列升序排序表格',
+  'command.sortDescending': '按此列降序排序表格',
+  'command.transpose': '转置表格（行列互换）',
+  'command.copyAsRichText': '将表格复制为富文本',
+  'command.convertJson': '将 JSON 数组转换为表格',
+  'command.tableTools': '表格工具',
+
+  // Table actions
+  'action.insertRowAbove': '在上方插入行',
+  'action.insertRowBelow': '在下方插入行',
+  'action.deleteRow': '删除行',
+  'action.moveRowUp': '上移行',
+  'action.moveRowDown': '下移行',
+  'action.insertColumnLeft': '在左侧插入列',
+  'action.insertColumnRight': '在右侧插入列',
+  'action.deleteColumn': '删除列',
+  'action.moveColumnLeft': '左移列',
+  'action.moveColumnRight': '右移列',
+  'action.alignLeft': '列左对齐',
+  'action.alignCenter': '列居中对齐',
+  'action.alignRight': '列右对齐',
+  'action.alignNone': '清除列对齐',
+  'menu.insertRowBelow': '表格：在下方插入行',
+  'menu.deleteRow': '表格：删除行',
+  'menu.insertColumnRight': '表格：在右侧插入列',
+  'menu.deleteColumn': '表格：删除列',
+  'menu.moreTools': '表格：更多工具…',
+
+  // Counts
+  'count.rows.one': '1 行',
+  'count.rows.other': '{count} 行',
+  'count.columns.one': '1 列',
+  'count.columns.other': '{count} 列',
+
+  // Notices
+  'notice.noDelimitedFiles': '此仓库中没有 .csv 或 .tsv 文件。',
+  'notice.cannotPlaceTable': '此处无法放置表格：光标位于代码、属性或另一个表格中。',
+  'notice.clipboardEmpty': '剪贴板中没有可用来生成表格的文本。',
+  'notice.pastedEmpty': '粘贴的内容中没有可用来生成表格的文本。',
+  'notice.selectionEmpty': '所选内容中没有可用来生成表格的文本。',
+  'notice.fileEmpty': '{file} 中没有可用来生成表格的行。',
+  'notice.inserted': '已插入 {file}：{rows}。',
+  'notice.saved': '已将 {rows} 保存到 {path}。',
+  'notice.copied': '已复制 {rows}（共 {columns}）。{hint}',
+  'notice.copiedRich': '已将 {rows} 复制为表格。可粘贴到 Docs、Word 或电子邮件中。',
+  'notice.sorted': '已排序 {rows}。',
+  'notice.transposed': '已转置 {rows}。',
+  'notice.alreadyInOrder': '表格已是该顺序。',
+  'hint.spreadsheet': '可粘贴到任何电子表格中。',
+  'hint.csv': '可粘贴到任何接受 CSV 的地方。',
+  'hint.richFallback': '此处无法使用富文本，因此已复制为纯文本。',
+
+  // Why a table action cannot run
+  'error.rowAboveHeader': '行不能放在表头上方。',
+  'error.deleteHeader': '表头行不能删除。',
+  'error.deleteLastRow': '表格的最后一行不能删除。',
+  'error.moveHeader': '表头行不能移动。',
+  'error.rowAlreadyFirst': '该行已是表头下方的第一行。',
+  'error.rowAlreadyLast': '该行已是最后一行。',
+  'error.deleteLastColumn': '表格的最后一列不能删除。',
+  'error.columnAlreadyFirst': '该列已是第一列。',
+  'error.columnAlreadyLast': '该列已是最后一列。',
+  'error.noAlignment': '该列本来就没有对齐方式。',
+  'error.alreadyAligned.left': '该列已是左对齐。',
+  'error.alreadyAligned.center': '该列已是居中对齐。',
+  'error.alreadyAligned.right': '该列已是右对齐。',
+
+  // Modals and pickers
+  'modal.paste.intro': '请将单元格粘贴到下方的框中。在手机或平板上，请在框中长按，然后选择“粘贴”。',
+  'modal.paste.submit': '生成表格',
+  'modal.copy.intro': '无法写入剪贴板。表格已在下方选中：请复制它，然后粘贴到任何电子表格中。',
+  'modal.pickFile': '选择要插入为表格的 CSV 或 TSV 文件',
+  'modal.pickAction': '选择表格操作',
+
+  // Settings
+  'setting.convertOnPaste.name': '粘贴时转换',
+  'setting.convertOnPaste.desc': '正常粘贴从电子表格复制的单元格时，将其转换为表格。关闭后，请改用“粘贴为表格”命令。',
+  'setting.firstRowIsHeader.name': '第一行为表头',
+  'setting.firstRowIsHeader.desc': '将复制的第一行用作表头。关闭后，表头行留空。',
+  'setting.alignNumbers.name': '数字右对齐',
+  'setting.alignNumbers.desc': '当某列在表头以下的每个单元格都是数字时，将该列右对齐。',
+  'setting.padColumns.name': '对齐各列',
+  'setting.padColumns.desc': '用空格填充单元格，使各列在编辑器中对齐。关闭后，表格为紧凑格式。',
+  'setting.defaultAlign.name': '默认列对齐方式',
+  'setting.defaultAlign.desc': '将文本转换为表格时，非数字列的对齐方式。启用上面的设置时，数字列仍保持右对齐。',
+  'option.alignNone': '无',
+  'option.alignLeft': '左',
+  'option.alignCenter': '居中',
+  'option.alignRight': '右',
+};
+
+export default zh;

@@ -29,6 +29,7 @@ import {
 import type { Outcome } from './src/tabletools.ts';
 import { columnAt, readTable, sortBody, transpose, writeTable } from './src/transform.ts';
 import type { Align, SourceTable } from './src/transform.ts';
+import { t } from './src/i18n.ts';
 
 const ALIGNMENTS: Align[] = ['none', 'left', 'center', 'right'];
 
@@ -40,26 +41,26 @@ interface TableAction {
   id: string;
   name: string;
   icon: string;
-  /** Shown straight in the editor's context menu, not only in the picker. */
-  menu?: boolean;
+  /** Shown straight in the editor's context menu, with this title, not only in the picker. */
+  menu?: string;
   run: (table: SourceTable, row: number, column: number) => Outcome;
 }
 
 const TABLE_ACTIONS: TableAction[] = [
-  { id: 'insert-row-above', name: 'Insert row above', icon: 'between-horizontal-start', run: (t, r) => insertRow(t, r, 'above') },
-  { id: 'insert-row-below', name: 'Insert row below', icon: 'between-horizontal-end', menu: true, run: (t, r) => insertRow(t, r, 'below') },
-  { id: 'delete-row', name: 'Delete row', icon: 'trash-2', menu: true, run: (t, r, c) => deleteRow(t, r, c) },
-  { id: 'move-row-up', name: 'Move row up', icon: 'arrow-up', run: (t, r, c) => moveRow(t, r, 'up', c) },
-  { id: 'move-row-down', name: 'Move row down', icon: 'arrow-down', run: (t, r, c) => moveRow(t, r, 'down', c) },
-  { id: 'insert-column-left', name: 'Insert column left', icon: 'between-vertical-start', run: (t, r, c) => insertColumn(t, c, 'left', r) },
-  { id: 'insert-column-right', name: 'Insert column right', icon: 'between-vertical-end', menu: true, run: (t, r, c) => insertColumn(t, c, 'right', r) },
-  { id: 'delete-column', name: 'Delete column', icon: 'trash', menu: true, run: (t, r, c) => deleteColumn(t, c, r) },
-  { id: 'move-column-left', name: 'Move column left', icon: 'arrow-left', run: (t, r, c) => moveColumn(t, c, 'left', r) },
-  { id: 'move-column-right', name: 'Move column right', icon: 'arrow-right', run: (t, r, c) => moveColumn(t, c, 'right', r) },
-  { id: 'align-column-left', name: 'Align column left', icon: 'align-left', run: (t, r, c) => setAlignment(t, c, 'left', r) },
-  { id: 'align-column-center', name: 'Align column center', icon: 'align-center', run: (t, r, c) => setAlignment(t, c, 'center', r) },
-  { id: 'align-column-right', name: 'Align column right', icon: 'align-right', run: (t, r, c) => setAlignment(t, c, 'right', r) },
-  { id: 'align-column-none', name: 'Clear column alignment', icon: 'remove-formatting', run: (t, r, c) => setAlignment(t, c, 'none', r) },
+  { id: 'insert-row-above', name: t('action.insertRowAbove'), icon: 'between-horizontal-start', run: (t, r) => insertRow(t, r, 'above') },
+  { id: 'insert-row-below', name: t('action.insertRowBelow'), icon: 'between-horizontal-end', menu: t('menu.insertRowBelow'), run: (t, r) => insertRow(t, r, 'below') },
+  { id: 'delete-row', name: t('action.deleteRow'), icon: 'trash-2', menu: t('menu.deleteRow'), run: (t, r, c) => deleteRow(t, r, c) },
+  { id: 'move-row-up', name: t('action.moveRowUp'), icon: 'arrow-up', run: (t, r, c) => moveRow(t, r, 'up', c) },
+  { id: 'move-row-down', name: t('action.moveRowDown'), icon: 'arrow-down', run: (t, r, c) => moveRow(t, r, 'down', c) },
+  { id: 'insert-column-left', name: t('action.insertColumnLeft'), icon: 'between-vertical-start', run: (t, r, c) => insertColumn(t, c, 'left', r) },
+  { id: 'insert-column-right', name: t('action.insertColumnRight'), icon: 'between-vertical-end', menu: t('menu.insertColumnRight'), run: (t, r, c) => insertColumn(t, c, 'right', r) },
+  { id: 'delete-column', name: t('action.deleteColumn'), icon: 'trash', menu: t('menu.deleteColumn'), run: (t, r, c) => deleteColumn(t, c, r) },
+  { id: 'move-column-left', name: t('action.moveColumnLeft'), icon: 'arrow-left', run: (t, r, c) => moveColumn(t, c, 'left', r) },
+  { id: 'move-column-right', name: t('action.moveColumnRight'), icon: 'arrow-right', run: (t, r, c) => moveColumn(t, c, 'right', r) },
+  { id: 'align-column-left', name: t('action.alignLeft'), icon: 'align-left', run: (t, r, c) => setAlignment(t, c, 'left', r) },
+  { id: 'align-column-center', name: t('action.alignCenter'), icon: 'align-center', run: (t, r, c) => setAlignment(t, c, 'center', r) },
+  { id: 'align-column-right', name: t('action.alignRight'), icon: 'align-right', run: (t, r, c) => setAlignment(t, c, 'right', r) },
+  { id: 'align-column-none', name: t('action.alignNone'), icon: 'remove-formatting', run: (t, r, c) => setAlignment(t, c, 'none', r) },
 ];
 
 interface SpreadsheetToTableSettings extends TableOptions {
@@ -88,7 +89,7 @@ export default class SpreadsheetToTablePlugin extends Plugin {
 
     this.addCommand({
       id: 'paste-as-table',
-      name: 'Paste as table',
+      name: t('command.pasteAsTable'),
       icon: 'clipboard-paste',
       editorCallback: (editor) => {
         void this.pasteAsTable(editor);
@@ -96,7 +97,7 @@ export default class SpreadsheetToTablePlugin extends Plugin {
     });
     this.addCommand({
       id: 'convert-selection-to-table',
-      name: 'Convert selection to table',
+      name: t('command.convertSelection'),
       icon: 'table',
       editorCheckCallback: (checking, editor) => {
         if (!editor.somethingSelected()) return false;
@@ -106,7 +107,7 @@ export default class SpreadsheetToTablePlugin extends Plugin {
     });
     this.addCommand({
       id: 'copy-table-for-spreadsheet',
-      name: 'Copy table for a spreadsheet',
+      name: t('command.copyForSpreadsheet'),
       icon: 'clipboard-copy',
       editorCheckCallback: (checking, editor) => {
         const rows = this.tableAtCursor(editor);
@@ -118,16 +119,16 @@ export default class SpreadsheetToTablePlugin extends Plugin {
 
     this.addCommand({
       id: 'insert-csv-file',
-      name: 'Insert CSV file as table',
+      name: t('command.insertCsvFile'),
       icon: 'file-spreadsheet',
       editorCallback: (editor) => {
         const files = this.app.vault.getFiles().filter((file) => /^(csv|tsv)$/i.test(file.extension));
         if (files.length === 0) {
-          new Notice('There are no .csv or .tsv files in this vault.');
+          new Notice(t('notice.noDelimitedFiles'));
           return;
         }
         if (!this.canPlaceTable(editor)) {
-          new Notice('A table cannot go here: the cursor is in code, the properties or another table.');
+          new Notice(t('notice.cannotPlaceTable'));
           return;
         }
         new DelimitedFilePicker(this.app, files, (file) => void this.insertFile(editor, file)).open();
@@ -135,18 +136,18 @@ export default class SpreadsheetToTablePlugin extends Plugin {
     });
     this.addCommand({
       id: 'copy-table-as-csv',
-      name: 'Copy table as CSV',
+      name: t('command.copyAsCsv'),
       icon: 'clipboard-list',
       editorCheckCallback: (checking, editor) => {
         const rows = this.tableAtCursor(editor);
         if (!rows) return false;
-        if (!checking) void this.copyText(toCsv(rows), rows, 'Paste it wherever CSV is accepted.');
+        if (!checking) void this.copyText(toCsv(rows), rows, t('hint.csv'));
         return true;
       },
     });
     this.addCommand({
       id: 'save-table-as-csv',
-      name: 'Save table as CSV file',
+      name: t('command.saveAsCsv'),
       icon: 'file-down',
       editorCheckCallback: (checking, editor, ctx) => {
         const rows = this.tableAtCursor(editor);
@@ -158,28 +159,28 @@ export default class SpreadsheetToTablePlugin extends Plugin {
 
     this.addCommand({
       id: 'sort-table-ascending',
-      name: 'Sort table by this column, ascending',
+      name: t('command.sortAscending'),
       icon: 'arrow-down-az',
       editorCheckCallback: (checking, editor) =>
-        this.reshape(checking, editor, (table, column) => ({ ...table, body: sortBody(table.body, column, false) }), 'Sorted'),
+        this.reshape(checking, editor, (table, column) => ({ ...table, body: sortBody(table.body, column, false) }), 'sorted'),
     });
     this.addCommand({
       id: 'sort-table-descending',
-      name: 'Sort table by this column, descending',
+      name: t('command.sortDescending'),
       icon: 'arrow-up-za',
       editorCheckCallback: (checking, editor) =>
-        this.reshape(checking, editor, (table, column) => ({ ...table, body: sortBody(table.body, column, true) }), 'Sorted'),
+        this.reshape(checking, editor, (table, column) => ({ ...table, body: sortBody(table.body, column, true) }), 'sorted'),
     });
     this.addCommand({
       id: 'transpose-table',
-      name: 'Transpose table (swap rows and columns)',
+      name: t('command.transpose'),
       icon: 'arrow-down-up',
-      editorCheckCallback: (checking, editor) => this.reshape(checking, editor, (table) => transpose(table), 'Transposed'),
+      editorCheckCallback: (checking, editor) => this.reshape(checking, editor, (table) => transpose(table), 'transposed'),
     });
 
     this.addCommand({
       id: 'copy-table-as-rich-text',
-      name: 'Copy table as rich text',
+      name: t('command.copyAsRichText'),
       icon: 'clipboard-type',
       editorCheckCallback: (checking, editor) => {
         const table = this.tableToCopy(editor);
@@ -190,7 +191,7 @@ export default class SpreadsheetToTablePlugin extends Plugin {
     });
     this.addCommand({
       id: 'convert-json-to-table',
-      name: 'Convert JSON array to table',
+      name: t('command.convertJson'),
       icon: 'braces',
       editorCheckCallback: (checking, editor) => {
         if (!editor.somethingSelected()) return false;
@@ -211,7 +212,7 @@ export default class SpreadsheetToTablePlugin extends Plugin {
     }
     this.addCommand({
       id: 'table-tools',
-      name: 'Table tools',
+      name: t('command.tableTools'),
       icon: 'table-properties',
       editorCheckCallback: (checking, editor) => {
         if (!this.hasTable(editor)) return false;
@@ -230,11 +231,11 @@ export default class SpreadsheetToTablePlugin extends Plugin {
   private addTableMenu(menu: Menu, editor: Editor): void {
     if (!this.hasTable(editor)) return;
     menu.addSeparator();
-    for (const action of TABLE_ACTIONS.filter((a) => a.menu)) {
+    for (const action of TABLE_ACTIONS.filter((a) => a.menu !== undefined)) {
       menu.addItem((item) =>
         item
           .setSection('table-tools')
-          .setTitle(`Table: ${action.name.toLowerCase()}`)
+          .setTitle(action.menu ?? action.name)
           .setIcon(action.icon)
           .onClick(() => this.editTable(false, editor, action)),
       );
@@ -242,7 +243,7 @@ export default class SpreadsheetToTablePlugin extends Plugin {
     menu.addItem((item) =>
       item
         .setSection('table-tools')
-        .setTitle('Table: more tools...')
+        .setTitle(t('menu.moreTools'))
         .setIcon('table-properties')
         .onClick(() => this.openTableTools(editor)),
     );
@@ -328,10 +329,10 @@ export default class SpreadsheetToTablePlugin extends Plugin {
       ]);
     } catch {
       // Where rich copying is off limits, the text version still goes.
-      await this.copyText(plain, rows, 'Rich text is not available here, so it was copied as plain text.');
+      await this.copyText(plain, rows, t('hint.richFallback'));
       return;
     }
-    new Notice(`Copied ${count(rows.length, 'row')} as a table. Paste it into Docs, Word or an email.`);
+    new Notice(t('notice.copiedRich', { rows: rowsLabel(rows.length) }));
   }
 
   /**
@@ -342,7 +343,7 @@ export default class SpreadsheetToTablePlugin extends Plugin {
     checking: boolean,
     editor: Editor,
     change: (table: SourceTable, column: number) => SourceTable,
-    verb: string,
+    verb: 'sorted' | 'transposed',
   ): boolean {
     const cursor = editor.getCursor();
     const raw = editor.getValue().split('\n');
@@ -363,22 +364,22 @@ export default class SpreadsheetToTablePlugin extends Plugin {
     const from = { line: found.start, ch: 0 };
     const to = { line: found.end, ch: raw[found.end].length };
     if (editor.getRange(from, to) === text) {
-      new Notice('The table is already in that order.');
+      new Notice(t('notice.alreadyInOrder'));
       return true;
     }
     editor.transaction({ changes: [{ from, to, text }] });
-    new Notice(`${verb} ${count(table.body.length, 'row')}.`);
+    new Notice(t(`notice.${verb}`, { rows: rowsLabel(table.body.length) }));
     return true;
   }
 
   private async insertFile(editor: Editor, file: TFile): Promise<void> {
     const rows = readDelimitedFile(await this.app.vault.read(file), file.extension);
     if (!rows) {
-      new Notice(`${file.name} has no rows to make a table from.`);
+      new Notice(t('notice.fileEmpty', { file: file.name }));
       return;
     }
     this.insertTable(editor, rows);
-    new Notice(`Inserted ${file.name}: ${count(rows.length, 'row')}.`);
+    new Notice(t('notice.inserted', { file: file.name, rows: rowsLabel(rows.length) }));
   }
 
   /**
@@ -392,7 +393,7 @@ export default class SpreadsheetToTablePlugin extends Plugin {
       path = normalizePath(`${folder}${note.basename} ${n}.csv`);
     }
     await this.app.vault.create(path, toCsv(rows));
-    new Notice(`Saved ${count(rows.length, 'row')} to ${path}.`);
+    new Notice(t('notice.saved', { rows: rowsLabel(rows.length), path }));
   }
 
   async loadSettings() {
@@ -454,16 +455,16 @@ export default class SpreadsheetToTablePlugin extends Plugin {
       // paste the user makes themselves always works, so ask for one.
     }
     if (text === '') {
-      new PasteBox(this.app, (pasted) => this.insertDelimited(editor, pasted, 'The pasted text')).open();
+      new PasteBox(this.app, (pasted) => this.insertDelimited(editor, pasted, 'pasted')).open();
       return;
     }
-    this.insertDelimited(editor, text, 'The clipboard');
+    this.insertDelimited(editor, text, 'clipboard');
   }
 
-  private insertDelimited(editor: Editor, text: string, source: string): void {
+  private insertDelimited(editor: Editor, text: string, source: 'pasted' | 'clipboard'): void {
     const read = readAnyDelimited(text);
     if (!read) {
-      new Notice(`${source} has no text to make a table from.`);
+      new Notice(source === 'pasted' ? t('notice.pastedEmpty') : t('notice.clipboardEmpty'));
       return;
     }
     this.insertTable(editor, read.rows);
@@ -472,7 +473,7 @@ export default class SpreadsheetToTablePlugin extends Plugin {
   private convertSelection(editor: Editor): void {
     const read = readAnyDelimited(editor.getSelection());
     if (!read) {
-      new Notice('The selection has no text to make a table from.');
+      new Notice(t('notice.selectionEmpty'));
       return;
     }
     this.insertTable(editor, read.rows);
@@ -520,7 +521,7 @@ export default class SpreadsheetToTablePlugin extends Plugin {
   }
 
   private async copyForSpreadsheet(rows: Rows): Promise<void> {
-    await this.copyText(toTsv(rows), rows, 'Paste into any spreadsheet.');
+    await this.copyText(toTsv(rows), rows, t('hint.spreadsheet'));
   }
 
   private async copyText(text: string, rows: Rows, hint: string): Promise<void> {
@@ -533,7 +534,7 @@ export default class SpreadsheetToTablePlugin extends Plugin {
       return;
     }
     const columns = Math.max(...rows.map((row) => row.length));
-    new Notice(`Copied ${count(rows.length, 'row')} of ${count(columns, 'column')}. ${hint}`);
+    new Notice(t('notice.copied', { rows: rowsLabel(rows.length), columns: columnsLabel(columns), hint }));
   }
 }
 
@@ -548,9 +549,9 @@ class PasteBox extends Modal {
   }
 
   onOpen(): void {
-    this.titleEl.setText('Paste as table');
+    this.titleEl.setText(t('command.pasteAsTable'));
     this.contentEl.createEl('p', {
-      text: 'Paste your cells into the box below. On a phone or tablet, press and hold in the box, then choose Paste.',
+      text: t('modal.paste.intro'),
     });
     const box = this.contentEl.createEl('textarea');
     box.rows = 6;
@@ -562,7 +563,7 @@ class PasteBox extends Modal {
     });
     new Setting(this.contentEl).addButton((button) =>
       button
-        .setButtonText('Make table')
+        .setButtonText(t('modal.paste.submit'))
         .setCta()
         .onClick(() => this.finish(box.value)),
     );
@@ -587,7 +588,7 @@ class DelimitedFilePicker extends FuzzySuggestModal<TFile> {
     private readonly onPick: (file: TFile) => void,
   ) {
     super(app);
-    this.setPlaceholder('Choose a CSV or TSV file to insert as a table');
+    this.setPlaceholder(t('modal.pickFile'));
   }
 
   getItems(): TFile[] {
@@ -607,7 +608,7 @@ class DelimitedFilePicker extends FuzzySuggestModal<TFile> {
 class TableToolPicker extends FuzzySuggestModal<TableAction> {
   constructor(app: App, private readonly onPick: (action: TableAction) => void) {
     super(app);
-    this.setPlaceholder('Choose a table action');
+    this.setPlaceholder(t('modal.pickAction'));
   }
 
   getItems(): TableAction[] {
@@ -630,9 +631,9 @@ class CopyBox extends Modal {
   }
 
   onOpen(): void {
-    this.titleEl.setText('Copy table for a spreadsheet');
+    this.titleEl.setText(t('command.copyForSpreadsheet'));
     this.contentEl.createEl('p', {
-      text: 'The clipboard could not be written to. The table is selected below: copy it, then paste it into any spreadsheet.',
+      text: t('modal.copy.intro'),
     });
     const box = this.contentEl.createEl('textarea');
     box.rows = 6;
@@ -647,9 +648,8 @@ class CopyBox extends Modal {
   }
 }
 
-function count(n: number, noun: string): string {
-  return `${n} ${noun}${n === 1 ? '' : 's'}`;
-}
+const rowsLabel = (n: number): string => (n === 1 ? t('count.rows.one') : t('count.rows.other', { count: n }));
+const columnsLabel = (n: number): string => (n === 1 ? t('count.columns.one') : t('count.columns.other', { count: n }));
 
 type SettingKey = Exclude<keyof SpreadsheetToTableSettings, 'defaultAlign'>;
 
@@ -664,34 +664,21 @@ interface SettingRow {
  * table, so the declarative one and the pre-1.13 fallback cannot drift.
  */
 const SETTINGS: SettingRow[] = [
-  {
-    key: 'convertOnPaste',
-    name: 'Convert on paste',
-    desc:
-      'Turn cells copied from a spreadsheet into a table when you paste them normally. ' +
-      'When this is off, use the "Paste as table" command instead.',
-  },
-  {
-    key: 'firstRowIsHeader',
-    name: 'First row is the header',
-    desc: 'Use the first copied row as the table header. When this is off, the header row is left empty.',
-  },
-  {
-    key: 'alignNumbers',
-    name: 'Right-align numbers',
-    desc: 'Right-align a column when every cell in it below the header is a number.',
-  },
-  {
-    key: 'padColumns',
-    name: 'Line up columns',
-    desc: 'Pad the cells with spaces so the columns line up in the editor. When this is off, tables are compact.',
-  },
+  { key: 'convertOnPaste', name: t('setting.convertOnPaste.name'), desc: t('setting.convertOnPaste.desc') },
+  { key: 'firstRowIsHeader', name: t('setting.firstRowIsHeader.name'), desc: t('setting.firstRowIsHeader.desc') },
+  { key: 'alignNumbers', name: t('setting.alignNumbers.name'), desc: t('setting.alignNumbers.desc') },
+  { key: 'padColumns', name: t('setting.padColumns.name'), desc: t('setting.padColumns.desc') },
 ];
 
 const ALIGN_SETTING = {
-  name: 'Default column alignment',
-  desc: 'Alignment of columns that are not numbers when text is converted to a table. Number columns stay right-aligned when that setting is on.',
-  options: { none: 'None', left: 'Left', center: 'Center', right: 'Right' } as Record<string, string>,
+  name: t('setting.defaultAlign.name'),
+  desc: t('setting.defaultAlign.desc'),
+  options: {
+    none: t('option.alignNone'),
+    left: t('option.alignLeft'),
+    center: t('option.alignCenter'),
+    right: t('option.alignRight'),
+  } as Record<string, string>,
 };
 
 class SpreadsheetToTableSettingTab extends PluginSettingTab {
