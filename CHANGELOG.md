@@ -4,6 +4,10 @@ The release workflow uses the section named after the version being released
 as the release description, so every version needs one. `npm version <x.y.z>`
 renames the `Unreleased` heading below to that version.
 
+## 0.5.3
+
+- Settings: a link to more plugins, the optional Pro versions and template vaults (opens a web page when clicked).
+
 ## 0.5.2
 
 - A table pasted under a callout's title now has a blank quote line before it, so it shows as a table in older Obsidian versions too (1.0 showed it as plain text).
