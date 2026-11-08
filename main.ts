@@ -30,7 +30,7 @@ import type { Outcome } from './src/tabletools.ts';
 import { columnAt, readTable, sortBody, transpose, writeTable } from './src/transform.ts';
 import type { Align, SourceTable } from './src/transform.ts';
 import { t } from './src/i18n.ts';
-import { moreText, openMore } from './src/more-link.ts';
+import { moreDefinitions, renderMore } from './src/more-link.ts';
 
 /** Older names (or the nearest icon) for Lucide icons that older Obsidian versions lack. */
 const OLDER_ICONS: Record<string, string> = {
@@ -731,7 +731,7 @@ class SpreadsheetToTableSettingTab extends PluginSettingTab {
           options: ALIGN_SETTING.options,
         },
       },
-      { name: moreText().name, desc: moreText().desc, action: () => openMore() },
+      ...(moreDefinitions() as SettingDefinitionItem[]),
     ];
   }
 
@@ -771,9 +771,6 @@ class SpreadsheetToTableSettingTab extends PluginSettingTab {
           .onChange((value) => this.setControlValue('defaultAlign', value));
       });
 
-    new Setting(containerEl)
-      .setName(moreText().name)
-      .setDesc(moreText().desc)
-      .addButton((b) => b.setButtonText(moreText().button).onClick(() => openMore()));
+    renderMore(this.containerEl, (el) => new Setting(el));
   }
 }
