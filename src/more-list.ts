@@ -2,7 +2,7 @@
 import type { MorePick } from './more-link.ts';
 
 export const PICKS: readonly MorePick[] = [
+	{ id: "book-studio", name: "Book Studio", desc: "Turn notes into a print-ready PDF and EPUB." },
 	{ id: "line-editing-commands", name: "Line Editing Commands", desc: "Duplicate, join, sort and reverse lines." },
 	{ id: "url-cards", name: "URL Cards", desc: "Show web addresses as cards." },
-	{ id: "update-radar", name: "Update Radar", desc: "Background check for plugin updates." },
 ];
